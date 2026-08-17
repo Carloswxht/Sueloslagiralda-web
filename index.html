@@ -155,7 +155,7 @@
     overflow:hidden;
     background-image:url('hero-suelo.jpg');
     background-size:cover;
-    background-position:center 22%;
+    background-position:center 55%;
     background-color:var(--walnut);
   }
   .hero > .plank-seam{ margin-top:auto; }
@@ -164,11 +164,11 @@
     position:absolute; inset:0;
     background:linear-gradient(
       to bottom,
-      rgba(20,15,10,0.62) 0%,
-      rgba(20,15,10,0.52) 22%,
-      rgba(20,15,10,0.30) 42%,
-      rgba(20,15,10,0.06) 62%,
-      rgba(20,15,10,0) 75%
+      rgba(20,15,10,0.50) 0%,
+      rgba(20,15,10,0.42) 22%,
+      rgba(20,15,10,0.26) 42%,
+      rgba(20,15,10,0.05) 60%,
+      rgba(20,15,10,0) 72%
     );
     pointer-events:none;
   }
@@ -203,9 +203,20 @@
   h1.hero-title em{
     font-style:italic; color:var(--ocre);
   }
+  h1.hero-title .word-fix{
+    text-shadow:
+      -1px -1px 0 rgba(20,15,10,0.6),
+       1px -1px 0 rgba(20,15,10,0.6),
+      -1px  1px 0 rgba(20,15,10,0.6),
+       1px  1px 0 rgba(20,15,10,0.6),
+       0 3px 12px rgba(20,15,10,0.55);
+  }
   .hero-sub{
-    font-size:1.08rem; color:var(--stone-light); opacity:0.92; max-width:46ch; margin-bottom:32px;
-    text-shadow:0 1px 12px rgba(0,0,0,0.3);
+    display:inline-block;
+    font-size:1.08rem; color:var(--stone-light); max-width:46ch; margin-bottom:32px;
+    padding:8px 18px; border-radius:8px;
+    background:rgba(15,11,7,0.28);
+    text-shadow:0 1px 8px rgba(0,0,0,0.25);
   }
   .hero-ctas{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:36px;}
   .hero-trust{
@@ -217,7 +228,7 @@
   }
   .trust-stat span{font-size:0.82rem; color:var(--walnut-soft);}
   @media (max-width:640px){
-    .hero{ padding:118px 0 48px; background-position:center 16%; }
+    .hero{ padding:118px 0 96px; background-position:center 48%; }
     h1.hero-title{ font-size:clamp(2rem, 7vw, 2.6rem); }
   }
 
@@ -793,8 +804,8 @@
   <div class="wrap hero-grid">
     <div>
       <div class="eyebrow">Instalación de suelos en Sevilla y cercanías</div>
-      <h1 class="hero-title">Tu suelo nuevo. <em>Sin obra. Sin escombros.</em> Sin esperar semanas.</h1>
-      <p class="hero-sub">Instalamos tarima flotante, laminado y vinilo / SPC directamente sobre tu suelo actual, con visita técnica y presupuesto sin compromiso antes de empezar nada.</p>
+      <h1 class="hero-title">Tu suelo nuevo. <em>Sin <span class="word-fix">obra</span>. Sin escombros.</em> Sin esperar semanas.</h1>
+      <p class="hero-sub">Sobre tu suelo actual. Presupuesto sin compromiso.</p>
       <div class="hero-ctas">
         <a href="#presupuesto" class="btn btn-primary">Calcular presupuesto gratis</a>
         <a href="https://wa.me/34605288673" class="btn btn-wa">
