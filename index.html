@@ -176,13 +176,10 @@
   }
   .hero-grid{
     position:relative; z-index:1;
-    display:block; max-width:680px; margin:0 auto; text-align:center;
-    padding-bottom:56px;
+    display:block; max-width:640px; margin:0 auto; text-align:center;
+    padding-bottom:28px;
   }
-  .hero-grid .eyebrow{ justify-content:center; color:var(--stone-light); }
-  .hero-grid .eyebrow::before{ background:var(--ocre); }
   .hero-grid .hero-ctas{ justify-content:center; }
-  .hero-grid .hero-sub{ margin-left:auto; margin-right:auto; }
   .eyebrow{
     display:inline-flex; align-items:center; gap:10px;
     font-family:'IBM Plex Mono', monospace; font-size:0.78rem;
@@ -193,9 +190,9 @@
     content:""; width:22px; height:1px; background:var(--azulejo);
   }
   h1.hero-title{
-    font-size:clamp(2.3rem, 4.6vw, 3.6rem);
-    line-height:1.05;
-    margin-bottom:22px;
+    font-size:clamp(2.1rem, 4.4vw, 3.3rem);
+    line-height:1.12;
+    margin-bottom:24px;
     color:var(--stone-light);
     text-shadow:0 2px 18px rgba(0,0,0,0.35);
   }
@@ -210,14 +207,7 @@
        1px  1px 0 rgba(20,15,10,0.6),
        0 3px 12px rgba(20,15,10,0.55);
   }
-  .hero-sub{
-    display:inline-block;
-    font-size:1.08rem; color:var(--stone-light); max-width:46ch; margin-bottom:32px;
-    padding:8px 18px; border-radius:8px;
-    background:rgba(15,11,7,0.28);
-    text-shadow:0 1px 8px rgba(0,0,0,0.25);
-  }
-  .hero-ctas{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:36px;}
+  .hero-ctas{display:flex; gap:14px; flex-wrap:wrap; justify-content:center;}
   .hero-trust{
     display:flex; gap:28px; flex-wrap:wrap;
     padding-top:24px; border-top:1px solid var(--line);
@@ -227,8 +217,8 @@
   }
   .trust-stat span{font-size:0.82rem; color:var(--walnut-soft);}
   @media (max-width:640px){
-    .hero{ padding:118px 0 96px; background-position:center 48%; }
-    h1.hero-title{ font-size:clamp(2rem, 7vw, 2.6rem); }
+    .hero{ padding:112px 0 72px; background-position:center 48%; }
+    h1.hero-title{ font-size:clamp(1.55rem, 6.4vw, 2.05rem); line-height:1.16; margin-bottom:18px; }
   }
 
   /* Hero visual: room mockup built from CSS planks */
@@ -802,9 +792,7 @@
 <section class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="eyebrow">Instalación de suelos en Sevilla y cercanías</div>
-      <h1 class="hero-title">Tu suelo nuevo. <em>Sin <span class="word-fix">obra</span>. Sin escombros.</em> Sin esperar semanas.</h1>
-      <p class="hero-sub">Sobre tu suelo actual. Presupuesto sin compromiso.</p>
+      <h1 class="hero-title">Tu suelo nuevo. <em>Sin <span class="word-fix">obra</span>.</em><br>Sin escombros. Sin esperar semanas.</h1>
       <div class="hero-ctas">
         <a href="#presupuesto" class="btn btn-primary">Calcular presupuesto gratis</a>
         <a href="https://wa.me/34605288673" class="btn btn-wa">
