@@ -1257,20 +1257,22 @@
   }
   window.addEventListener('DOMContentLoaded', playIntro);
 
-  // El botón flotante "Presupuesto" queda invisible durante todo el recorrido inicial
-  // (hero, asesor, presupuesto, materiales, cómo trabajamos, visita técnica) y se
-  // muestra recién a partir de "Quiénes somos", quedando visible desde ahí en adelante.
+  // El botón flotante "Presupuesto" se oculta específicamente en: Inicio (hero),
+  // Asesor de suelos, Presupuesto personalizado y Visita técnica. En cualquier
+  // otra sección de la página (Materiales, Cómo trabajamos, Quiénes somos,
+  // Antes/Después, Opiniones, Por qué elegirnos, FAQ) permanece visible.
   const floatBudgetBtn = document.querySelector('.float-budget');
-  const quienesSomosEl = document.getElementById('quienes-somos');
-  if(floatBudgetBtn && quienesSomosEl){
+  const seccionesSinBurbuja = document.querySelectorAll('.hero, #asesor, #presupuesto, #contacto');
+  if(floatBudgetBtn && seccionesSinBurbuja.length){
+    const estadoPorSeccion = new Map();
     const observer = new IntersectionObserver((entries)=>{
       entries.forEach(entry=>{
-        // Visible si "Quiénes somos" está en pantalla, o si ya se pasó de largo hacia abajo
-        const yaLlegoOPaso = entry.isIntersecting || entry.boundingClientRect.top < 0;
-        floatBudgetBtn.classList.toggle('visible', yaLlegoOPaso);
+        estadoPorSeccion.set(entry.target, entry.isIntersecting);
       });
+      const estaEnZonaOculta = Array.from(estadoPorSeccion.values()).some(visible => visible);
+      floatBudgetBtn.classList.toggle('visible', !estaEnZonaOculta);
     }, { threshold: 0 });
-    observer.observe(quienesSomosEl);
+    seccionesSinBurbuja.forEach(seccion => observer.observe(seccion));
   }
 
   // Envío de formularios a Supabase (tabla "leads")
