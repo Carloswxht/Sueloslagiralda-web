@@ -1626,8 +1626,8 @@
         label: 'Pregunta 2 de 5', progress: 40,
         question: '¿Esa zona se moja con frecuencia? (cocina, baño, lavadero...)',
         options: [
-          { text:'Sí, se moja bastante', action:()=>{ scores.vinilica_spc += 3; }, next:'trafico' },
-          { text:'No, se mantiene seca', next:'trafico' }
+          { text:'No, se mantiene seca', next:'trafico' },
+          { text:'Sí, se moja bastante', action:()=>{ scores.vinilica_spc += 3; }, next:'trafico' }
         ]
       },
       trafico: {
@@ -1640,10 +1640,10 @@
       },
       preferencia: {
         label: 'Pregunta 4 de 5', progress: 80,
-        question: '¿Qué prefieres: la sensación de madera real, o la mejor resistencia al mejor precio?',
+        question: '¿Qué es más importante para ti?',
         options: [
-          { text:'Madera real', next:'maderareal' },
-          { text:'Resistencia práctica', action:()=>{ scores.laminada+=2; }, next:'uso' }
+          { text:'Que no se raye con el uso diario', action:()=>{ scores.laminada+=2; }, next:'uso' },
+          { text:'Que al pisar se sienta como madera real', next:'maderareal' }
         ]
       },
       maderareal: {
@@ -1656,10 +1656,10 @@
       },
       uso: {
         label: 'Última pregunta', progress: 95,
-        question: '¿Es para tu vivienda habitual, o para alquilar (larga temporada o Airbnb)?',
+        question: '¿Es para tu vivienda habitual, o para alquiler vacacional (Airbnb)?',
         options: [
-          { text:'Vivienda propia', action:()=>{ scores.maciza+=1; scores.multicapa+=1; }, result:'auto' },
-          { text:'Alquiler / Airbnb', action:()=>{ scores.vinilica_spc+=1; scores.laminada+=1; }, result:'auto' }
+          { text:'Vivienda propia o alquiler de larga temporada', action:()=>{ scores.maciza+=1; scores.multicapa+=1; }, result:'auto' },
+          { text:'Airbnb / alquiler vacacional', action:()=>{ scores.vinilica_spc+=1; scores.laminada+=1; }, result:'auto' }
         ]
       }
     };
