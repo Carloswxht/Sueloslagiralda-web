@@ -3609,7 +3609,7 @@
     return `hace ${meses} meses`;
   }
 
-  const HISTORIAL_ICONO = { creado: '🆕', edicion: '✏️', pdf_enviado: '📤', mensaje_enviado: '💬', cambio_estado: '🔀', nota: '🗒️', foto: '📷', ingreso: '💰', gasto: '🧾', gasto_borrado: '🗑️', foto_borrada: '🗑️' };
+  const HISTORIAL_ICONO = { creado: '🆕', edicion: '✏️', pdf_enviado: '📤', mensaje_enviado: '💬', cambio_estado: '🔀', nota: '🗒️', foto: '📷', ingreso: '💰', gasto: '🧾', gasto_borrado: '🗑️', foto_borrada: '🗑️', instalador_asignado: '👷' };
 
   async function registrarHistorial(nombreProyecto, tipo, concepto){
     try{
@@ -3969,6 +3969,7 @@
                 body: JSON.stringify({ instaladores_ids: actuales })
               });
               if(!res.ok) throw new Error();
+              const anteriores = Array.isArray(proyecto.instaladores_ids) ? proyecto.instaladores_ids : [];
               proyecto.instaladores_ids = actuales;
               instaladorBadge.textContent = '👷 ' + (nombresInstaladores(actuales) || 'Sin asignar') + ' ▾';
               instaladorMenu.querySelectorAll('.proy-instalador-menu-item[data-instalador-id]:not(.proy-instalador-limpiar)').forEach(it=>{
@@ -3976,6 +3977,15 @@
                 it.classList.toggle('active', marcado);
                 it.textContent = (marcado ? '✓ ' : '') + it.textContent.replace(/^✓\s/, '');
               });
+              let concepto;
+              if(idClic === ''){
+                concepto = 'Se quitaron todos los instaladores asignados';
+              } else if(anteriores.includes(idClic)){
+                concepto = `Instalador quitado: ${nombreInstalador(idClic)}`;
+              } else {
+                concepto = `Instalador asignado: ${nombreInstalador(idClic)}`;
+              }
+              registrarHistorial(proyecto.nombre, 'instalador_asignado', concepto);
             } catch(err){ alert('No se pudo asignar. Revisa tu conexión.'); }
           });
         });
