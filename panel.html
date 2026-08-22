@@ -1727,7 +1727,7 @@
   }
 
   // Si el usuario NO es dueño y su rol no tiene "ver_todos_proyectos",
-  // solo debe ver los proyectos donde instalador_id sea su propio id.
+  // solo debe ver los proyectos donde su id esté dentro de instaladores_ids.
   function soloVeProyectosAsignados(){
     if(!perfilActual) return false;
     if(perfilActual.es_dueno) return false;
@@ -3689,7 +3689,7 @@
 
   function renderInicioFeedInstalador(feedEl, proyectosActivos, conteoPendientes){
     const miId = sesionActual && sesionActual.user.id;
-    const misProyectos = proyectosActivos.filter(p => p.instalador_id === miId);
+    const misProyectos = proyectosActivos.filter(p => Array.isArray(p.instaladores_ids) && p.instaladores_ids.includes(miId));
 
     if(misProyectos.length === 0){
       feedEl.innerHTML = '<div class="empty"><h3>Hoy no tienes obra asignada</h3><p>Avisa a tu encargado si crees que esto es un error.</p></div>';
@@ -3824,7 +3824,7 @@
       ]);
       await revisarProyectosVencidos(todos);
       proyectosCargadosTodos = soloVeProyectosAsignados()
-        ? todos.filter(p => p.instalador_id === (sesionActual && sesionActual.user.id))
+        ? todos.filter(p => Array.isArray(p.instaladores_ids) && p.instaladores_ids.includes(sesionActual && sesionActual.user.id))
         : todos;
 
       if((perfilActual && perfilActual.es_dueno) || tienePermiso('asignar_instalador')){
@@ -3860,6 +3860,10 @@
     if(!instaladorId) return '';
     const u = equipoParaAsignarCache.find(x => x.id === instaladorId);
     return u ? u.nombre : '';
+  }
+  function nombresInstaladores(ids){
+    if(!Array.isArray(ids) || !ids.length) return '';
+    return ids.map(id => nombreInstalador(id)).filter(Boolean).join(', ');
   }
 
   function renderProyectosLista(){
@@ -3898,10 +3902,10 @@
               </div>
               ${((perfilActual && perfilActual.es_dueno) || tienePermiso('asignar_instalador')) ? `
               <div class="proy-instalador-wrap">
-                <span class="proy-badge proy-badge-click instalador">👷 ${escapeHtml(nombreInstalador(p.instalador_id)) || 'Sin asignar'} ▾</span>
+                <span class="proy-badge proy-badge-click instalador">👷 ${escapeHtml(nombresInstaladores(p.instaladores_ids)) || 'Sin asignar'} ▾</span>
                 <div class="proy-instalador-menu">
-                  <button type="button" class="proy-instalador-menu-item" data-instalador-id="">Sin asignar</button>
-                  ${equipoParaAsignarCache.map(u => `<button type="button" class="proy-instalador-menu-item ${p.instalador_id === u.id ? 'active' : ''}" data-instalador-id="${u.id}">${escapeHtml(u.nombre) || '(sin nombre)'}</button>`).join('')}
+                  ${equipoParaAsignarCache.map(u => `<button type="button" class="proy-instalador-menu-item ${Array.isArray(p.instaladores_ids) && p.instaladores_ids.includes(u.id) ? 'active' : ''}" data-instalador-id="${u.id}">${Array.isArray(p.instaladores_ids) && p.instaladores_ids.includes(u.id) ? '✓ ' : ''}${escapeHtml(u.nombre) || '(sin nombre)'}</button>`).join('')}
+                  <button type="button" class="proy-instalador-menu-item proy-instalador-limpiar" data-instalador-id="">Quitar todos</button>
                 </div>
               </div>` : ''}
               <div class="proy-iconos-fila">
@@ -3942,23 +3946,31 @@
         instaladorMenu.querySelectorAll('.proy-instalador-menu-item').forEach(item=>{
           item.addEventListener('click', async (e)=>{
             e.stopPropagation();
-            instaladorMenu.classList.remove('open');
             const proyecto = proyectosVista.find(p => String(p.id) === card.dataset.id);
             if(!proyecto) return;
-            const nuevoId = item.dataset.instaladorId || null;
-            if(nuevoId === proyecto.instalador_id) return;
-            const nuevoNombre = nuevoId ? nombreInstalador(nuevoId) : 'sin asignar';
-            const confirmado = confirm(`¿Asignar "${proyecto.nombre}" a ${nuevoNombre}?`);
-            if(!confirmado) return;
+            const idClic = item.dataset.instaladorId;
+            let actuales = Array.isArray(proyecto.instaladores_ids) ? proyecto.instaladores_ids.slice() : [];
+            if(idClic === ''){
+              actuales = []; // "Quitar todos"
+            } else if(actuales.includes(idClic)){
+              actuales = actuales.filter(id => id !== idClic); // ya estaba: lo quita
+            } else {
+              actuales.push(idClic); // no estaba: lo suma
+            }
             try{
               const res = await fetchAutenticado('/rest/v1/proyectos?id=eq.' + proyecto.id, {
                 method: 'PATCH',
                 headers: { 'Prefer': 'return=minimal' },
-                body: JSON.stringify({ instalador_id: nuevoId })
+                body: JSON.stringify({ instaladores_ids: actuales })
               });
               if(!res.ok) throw new Error();
-              proyecto.instalador_id = nuevoId;
-              renderProyectosLista();
+              proyecto.instaladores_ids = actuales;
+              instaladorBadge.textContent = '👷 ' + (nombresInstaladores(actuales) || 'Sin asignar') + ' ▾';
+              instaladorMenu.querySelectorAll('.proy-instalador-menu-item[data-instalador-id]:not(.proy-instalador-limpiar)').forEach(it=>{
+                const marcado = actuales.includes(it.dataset.instaladorId);
+                it.classList.toggle('active', marcado);
+                it.textContent = (marcado ? '✓ ' : '') + it.textContent.replace(/^✓\s/, '');
+              });
             } catch(err){ alert('No se pudo asignar. Revisa tu conexión.'); }
           });
         });
