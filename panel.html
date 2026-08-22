@@ -588,6 +588,22 @@
   .proy-estado-menu-item + .proy-estado-menu-item{ border-top:1px solid var(--line); }
   .proy-estado-menu-item.active{ background:var(--stone); font-weight:700; }
   .proy-estado-menu-item:active{ background:var(--stone); }
+  .proy-instalador-wrap{ position:relative; margin:8px 0 2px; }
+  .proy-badge.instalador{ background:var(--stone); color:var(--walnut-soft,#6e4626); }
+  .proy-instalador-menu{
+    position:absolute; top:calc(100% + 6px); left:0; min-width:190px; max-height:260px; overflow-y:auto;
+    background:var(--card); border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.22);
+    z-index:22; display:none;
+  }
+  .proy-instalador-menu.open{ display:block; }
+  .proy-instalador-menu-item{
+    display:flex; align-items:center; gap:8px; width:100%;
+    padding:11px 14px; background:none; border:none; text-align:left; cursor:pointer;
+    font-family:'Work Sans',sans-serif; font-size:0.86rem; font-weight:500; color:var(--walnut);
+  }
+  .proy-instalador-menu-item + .proy-instalador-menu-item{ border-top:1px solid var(--line); }
+  .proy-instalador-menu-item.active{ background:var(--stone); font-weight:700; }
+  .proy-instalador-menu-item:active{ background:var(--stone); }
   .proy-badge.en_proceso{ background:#DCE8F0; color:#2F5A73; }
   .proy-badge.finalizado{ background:#DCEEDD; color:#2C6B3F; }
   .proy-badge.cancelado{ background:#F5DBD8; color:var(--red); }
@@ -1668,6 +1684,8 @@
       { clave: 'cambiar_estado_proyecto', label: 'Cambiar el estado de un proyecto' },
       { clave: 'borrar_gasto', label: 'Borrar gastos' },
       { clave: 'borrar_foto', label: 'Borrar fotos de obra' },
+      { clave: 'ver_todos_proyectos', label: 'Ver todos los proyectos (si no lo marcas, solo ve los proyectos que tiene asignados)' },
+      { clave: 'asignar_instalador', label: 'Asignar instalador a un proyecto' },
     ]},
     { grupo: 'Clientes', items: [
       { clave: 'gestionar_leads', label: 'Ver y gestionar leads' },
@@ -1706,6 +1724,14 @@
   function tienePermiso(clave){
     if(perfilActual && perfilActual.es_dueno) return true;
     return permisosActuales.includes(clave);
+  }
+
+  // Si el usuario NO es dueño y su rol no tiene "ver_todos_proyectos",
+  // solo debe ver los proyectos donde instalador_id sea su propio id.
+  function soloVeProyectosAsignados(){
+    if(!perfilActual) return false;
+    if(perfilActual.es_dueno) return false;
+    return !tienePermiso('ver_todos_proyectos');
   }
 
   async function fetchAutenticado(path, opciones){
@@ -3381,6 +3407,7 @@
   let abonoPorProyectoCache = {};
   let pendientesPorProyectoCache = {};
   let filtroProyectoEstado = 'Todos';
+  let equipoParaAsignarCache = [];
   const proyectosListEl = document.getElementById('proyectosList');
   const proyFilterBtn = document.getElementById('proyFilterBtn');
   const proyFilterBtnLabel = document.getElementById('proyFilterBtnLabel');
@@ -3660,6 +3687,33 @@
     }
   }
 
+  function renderInicioFeedInstalador(feedEl, proyectosActivos, conteoPendientes){
+    const miId = sesionActual && sesionActual.user.id;
+    const misProyectos = proyectosActivos.filter(p => p.instalador_id === miId);
+
+    if(misProyectos.length === 0){
+      feedEl.innerHTML = '<div class="empty"><h3>Hoy no tienes obra asignada</h3><p>Avisa a tu encargado si crees que esto es un error.</p></div>';
+      return;
+    }
+
+    feedEl.innerHTML = '<div class="inicio-feed-titulo">Tu obra de hoy</div>' + misProyectos.map(p => `
+      <div class="inicio-card obra-hoy" data-id="${p.id}">
+        <div class="inicio-card-info">
+          <span class="inicio-card-nombre">${escapeHtml(p.nombre)}</span>
+          <span class="inicio-card-detalle">${escapeHtml(p.direccion) || p.tipo_suelo || 'Ver detalle'}${conteoPendientes[p.nombre] ? ` · ${conteoPendientes[p.nombre]} pendiente${conteoPendientes[p.nombre] === 1 ? '' : 's'}` : ''}</span>
+        </div>
+        <span class="inicio-card-tag" style="background:var(--stone); color:var(--walnut-soft);">${ESTADO_PROYECTO_LABEL[p.estado] || p.estado}</span>
+      </div>
+    `).join('');
+
+    feedEl.querySelectorAll('.inicio-card[data-id]').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        const proyecto = misProyectos.find(p => String(p.id) === card.dataset.id);
+        if(proyecto) abrirProyectoDetalle(proyecto);
+      });
+    });
+  }
+
   async function cargarInicioFeed(){
     const feedEl = document.getElementById('inicioFeed');
     if(!feedEl) return;
@@ -3683,6 +3737,11 @@
 
       const ESTADOS_FINALES = ['finalizado','cancelado','rechazado'];
       const proyectosActivos = proyectos.filter(p => !ESTADOS_FINALES.includes(p.estado));
+
+      if(soloVeProyectosAsignados()){
+        renderInicioFeedInstalador(feedEl, proyectosActivos, conteoPendientes);
+        return;
+      }
 
       // 1) Proyectos con pendientes de obra por resolver
       const proyectosConPendientes = proyectosActivos.filter(p => conteoPendientes[p.nombre] > 0);
@@ -3763,8 +3822,18 @@
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         }).then(r => r.ok ? r.json() : [])
       ]);
-      proyectosCargadosTodos = todos;
-      await revisarProyectosVencidos(proyectosCargadosTodos);
+      await revisarProyectosVencidos(todos);
+      proyectosCargadosTodos = soloVeProyectosAsignados()
+        ? todos.filter(p => p.instalador_id === (sesionActual && sesionActual.user.id))
+        : todos;
+
+      if((perfilActual && perfilActual.es_dueno) || tienePermiso('asignar_instalador')){
+        try{
+          const resEquipo = await fetchAutenticado('/rest/v1/usuarios_perfil?select=id,nombre&activo=eq.true&order=nombre.asc');
+          equipoParaAsignarCache = resEquipo.ok ? await resEquipo.json() : [];
+        } catch(err){ equipoParaAsignarCache = []; }
+      }
+
       gastoPorProyectoCache = {};
       gastosTodos.forEach(g=>{
         const key = g.proyecto || '';
@@ -3785,6 +3854,12 @@
     } catch(err){
       proyectosListEl.innerHTML = '<div class="empty"><h3>No se pudo conectar</h3><p>Revisa que la tabla "proyectos" exista en Supabase.</p></div>';
     }
+  }
+
+  function nombreInstalador(instaladorId){
+    if(!instaladorId) return '';
+    const u = equipoParaAsignarCache.find(x => x.id === instaladorId);
+    return u ? u.nombre : '';
   }
 
   function renderProyectosLista(){
@@ -3821,6 +3896,14 @@
                   <button type="button" class="proy-estado-menu-item ${p.estado === 'rechazado' ? 'active' : ''}" data-estado="rechazado">🚫 Rechazado</button>
                 </div>
               </div>
+              ${((perfilActual && perfilActual.es_dueno) || tienePermiso('asignar_instalador')) ? `
+              <div class="proy-instalador-wrap">
+                <span class="proy-badge proy-badge-click instalador">👷 ${escapeHtml(nombreInstalador(p.instalador_id)) || 'Sin asignar'} ▾</span>
+                <div class="proy-instalador-menu">
+                  <button type="button" class="proy-instalador-menu-item" data-instalador-id="">Sin asignar</button>
+                  ${equipoParaAsignarCache.map(u => `<button type="button" class="proy-instalador-menu-item ${p.instalador_id === u.id ? 'active' : ''}" data-instalador-id="${u.id}">${escapeHtml(u.nombre) || '(sin nombre)'}</button>`).join('')}
+                </div>
+              </div>` : ''}
               <div class="proy-iconos-fila">
                 <button type="button" class="proy-camara-btn proy-msg-btn" aria-label="Enviar mensaje de WhatsApp al cliente">💬</button>
                 <button type="button" class="proy-camara-btn proy-pdf-btn" aria-label="Enviar PDF por WhatsApp">📄</button>
@@ -3848,12 +3931,45 @@
         if(proyecto) abrirProyectoDetalle(proyecto);
       });
 
-      const badge = card.querySelector('.proy-badge-click');
+      const instaladorBadge = card.querySelector('.proy-badge-click.instalador');
+      const instaladorMenu = card.querySelector('.proy-instalador-menu');
+      if(instaladorBadge && instaladorMenu){
+        instaladorBadge.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          document.querySelectorAll('.proy-instalador-menu.open, .proy-estado-menu.open').forEach(m=>{ if(m !== instaladorMenu) m.classList.remove('open'); });
+          instaladorMenu.classList.toggle('open');
+        });
+        instaladorMenu.querySelectorAll('.proy-instalador-menu-item').forEach(item=>{
+          item.addEventListener('click', async (e)=>{
+            e.stopPropagation();
+            instaladorMenu.classList.remove('open');
+            const proyecto = proyectosVista.find(p => String(p.id) === card.dataset.id);
+            if(!proyecto) return;
+            const nuevoId = item.dataset.instaladorId || null;
+            if(nuevoId === proyecto.instalador_id) return;
+            const nuevoNombre = nuevoId ? nombreInstalador(nuevoId) : 'sin asignar';
+            const confirmado = confirm(`¿Asignar "${proyecto.nombre}" a ${nuevoNombre}?`);
+            if(!confirmado) return;
+            try{
+              const res = await fetchAutenticado('/rest/v1/proyectos?id=eq.' + proyecto.id, {
+                method: 'PATCH',
+                headers: { 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ instalador_id: nuevoId })
+              });
+              if(!res.ok) throw new Error();
+              proyecto.instalador_id = nuevoId;
+              renderProyectosLista();
+            } catch(err){ alert('No se pudo asignar. Revisa tu conexión.'); }
+          });
+        });
+      }
+
+      const badge = card.querySelector('.proy-badge-click:not(.instalador)');
       const estadoMenu = card.querySelector('.proy-estado-menu');
       if(badge && estadoMenu){
         badge.addEventListener('click', (e)=>{
           e.stopPropagation();
-          document.querySelectorAll('.proy-estado-menu.open').forEach(m=>{ if(m !== estadoMenu) m.classList.remove('open'); });
+          document.querySelectorAll('.proy-estado-menu.open, .proy-instalador-menu.open').forEach(m=>{ if(m !== estadoMenu) m.classList.remove('open'); });
           estadoMenu.classList.toggle('open');
         });
         estadoMenu.querySelectorAll('.proy-estado-menu-item').forEach(item=>{
@@ -4195,6 +4311,11 @@
   document.addEventListener('click', (e)=>{
     document.querySelectorAll('.proy-estado-menu.open').forEach(m=>{
       if(!m.closest('.proy-estado-wrap').contains(e.target)) m.classList.remove('open');
+    });
+  });
+  document.addEventListener('click', (e)=>{
+    document.querySelectorAll('.proy-instalador-menu.open').forEach(m=>{
+      if(!m.closest('.proy-instalador-wrap').contains(e.target)) m.classList.remove('open');
     });
   });
 
