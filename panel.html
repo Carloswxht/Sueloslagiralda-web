@@ -3931,6 +3931,11 @@
     }).join('');
     proyectosListEl.querySelectorAll('.proy-card').forEach(card=>{
       card.addEventListener('click', ()=>{
+        const menusAbiertos = card.querySelectorAll('.proy-estado-menu.open, .proy-instalador-menu.open');
+        if(menusAbiertos.length){
+          menusAbiertos.forEach(m => m.classList.remove('open'));
+          return; // este clic solo cierra el menú, no navega
+        }
         const proyecto = proyectosVista.find(p => String(p.id) === card.dataset.id);
         if(proyecto) abrirProyectoDetalle(proyecto);
       });
