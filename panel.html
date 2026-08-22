@@ -4108,6 +4108,7 @@
   }
 
   function renderProyectoDetalleContenido(contenedor, datos, proyecto){
+    const puedeVerFinanzas = (perfilActual && perfilActual.es_dueno) || tienePermiso('ver_finanzas');
     const totalAbonos = datos.abonos.reduce((acc,a)=> acc + (parseFloat(a.monto)||0), 0);
     const totalGastos = datos.gastos.reduce((acc,g)=> acc + (parseFloat(g.importe)||0), 0);
     const utilidad = totalAbonos - totalGastos;
@@ -4160,7 +4161,8 @@
       </div>
     `).join('');
 
-    const historial = datos.historial || [];
+    const TIPOS_HISTORIAL_DINERO = ['ingreso', 'gasto', 'gasto_borrado', 'edicion'];
+    const historial = (datos.historial || []).filter(h => puedeVerFinanzas || !TIPOS_HISTORIAL_DINERO.includes(h.tipo));
     const historialHtml = historial.length ? historial.map(h => `
       <div class="proyecto-gasto-linea">
         <span class="proyecto-gasto-nombre">${HISTORIAL_ICONO[h.tipo] || '•'} ${escapeHtml(h.concepto)}</span>
@@ -4181,6 +4183,7 @@
         ${pendientesHtml}
       ` : ''}
 
+      ${puedeVerFinanzas ? `
       <div class="proy-detalle-seccion-titulo">Abonos</div>
       ${abonosHtml}
       <div class="proyecto-footer">
@@ -4205,6 +4208,7 @@
           <span class="proyecto-footer-valor ${utilidad >= 0 ? 'positiva':'negativa'}">${euros(utilidad)}</span>
         </div>
       </div>
+      ` : ''}
 
       ${versionesPresupuesto.length ? `
         <div class="proy-detalle-seccion-titulo">Presupuesto</div>
@@ -4256,10 +4260,12 @@
       });
     });
 
-    contenedor.querySelector('.proy-detalle-ingreso').addEventListener('click', ()=>{
+    const btnDetalleIngreso = contenedor.querySelector('.proy-detalle-ingreso');
+    const btnDetalleGasto = contenedor.querySelector('.proy-detalle-gasto');
+    if(btnDetalleIngreso) btnDetalleIngreso.addEventListener('click', ()=>{
       abrirDineroDesdeProyecto('ingreso', proyecto);
     });
-    contenedor.querySelector('.proy-detalle-gasto').addEventListener('click', ()=>{
+    if(btnDetalleGasto) btnDetalleGasto.addEventListener('click', ()=>{
       abrirDineroDesdeProyecto('gasto', proyecto);
     });
 
