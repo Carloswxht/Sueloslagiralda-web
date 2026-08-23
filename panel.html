@@ -1825,6 +1825,17 @@
     }
   }
 
+  async function verificarTokenRecuperacion(tokenHash){
+    const res = await fetch(SUPABASE_URL + '/auth/v1/verify', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'recovery', token_hash: tokenHash })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error_description || data.msg || 'El enlace no es válido o ya caducó.');
+    return data.access_token;
+  }
+
   async function establecerNuevaContrasena(accessToken, password){
     const res = await fetch(SUPABASE_URL + '/auth/v1/user', {
       method: 'PUT',
@@ -5787,10 +5798,30 @@ ${utilidadNeta >= 0 ? 'Tu negocio está dejando ganancia por encima de los gasto
   cargarAjustesConfig();
   cargarInicioFeed();
 
-  // Cuando el usuario toca el enlace del correo de recuperación, Supabase lo trae
-  // de vuelta con #access_token=...&type=recovery en la URL. Si detectamos eso,
-  // mostramos la pantalla de "nueva contraseña" en vez del arranque normal.
-  (function revisarEnlaceRecuperacion(){
+  // Cuando el usuario toca el enlace del correo de recuperación, puede volver de dos formas
+  // según cómo esté armado el enlace: con ?token_hash=...&type=recovery en la URL normal
+  // (formato nuevo, que verificamos nosotros mismos contra Supabase), o con
+  // #access_token=...&type=recovery en la parte de después del # (formato viejo/automático
+  // de Supabase). Revisamos los dos para no depender de un solo formato.
+  (async function revisarEnlaceRecuperacion(){
+    const query = new URLSearchParams(location.search);
+    const tokenHash = query.get('token_hash');
+    const tipoQuery = query.get('type');
+    if(tokenHash && tipoQuery === 'recovery'){
+      history.replaceState(null, '', location.pathname);
+      try{
+        const accessToken = await verificarTokenRecuperacion(tokenHash);
+        if(accessToken){
+          mostrarNuevaContrasena(accessToken);
+          return;
+        }
+      } catch(err){
+        mostrarLogin();
+        document.getElementById('authErrorLogin').innerHTML = `<div class="auth-gate-error">${escapeHtml(err.message)}</div>`;
+        return;
+      }
+    }
+
     const hash = location.hash || '';
     if(hash.includes('type=recovery')){
       const params = new URLSearchParams(hash.replace(/^#/, ''));
