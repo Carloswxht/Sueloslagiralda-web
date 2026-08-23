@@ -427,6 +427,15 @@
     width:100%; padding:12px; border-radius:8px; border:1px solid var(--border,#e7e0d2);
     font-family:'Work Sans',sans-serif; font-size:0.9rem; box-sizing:border-box;
   }
+  .password-field-wrap{ position:relative; }
+  .password-field-wrap input{ padding-right:42px !important; }
+  .password-toggle-btn{
+    position:absolute; right:4px; top:50%; transform:translateY(-50%);
+    width:34px; height:34px; border:none; background:none; cursor:pointer;
+    font-size:1.05rem; display:flex; align-items:center; justify-content:center;
+    border-radius:6px;
+  }
+  .password-toggle-btn:active{ background:var(--stone); }
   .auth-gate-card .presu-btn-generar{ margin-top:6px; }
   .auth-gate-switch{
     text-align:center; margin-top:16px; font-family:'Work Sans',sans-serif; font-size:0.82rem; color:var(--walnut-soft);
@@ -437,6 +446,11 @@
   }
   .auth-gate-error{
     background:#FBE9E7; color:#B3401F; font-size:0.8rem; padding:9px 12px; border-radius:8px; margin-bottom:12px;
+  }
+  .auth-gate-olvide{ text-align:center; margin-top:10px; }
+  .auth-gate-olvide button{
+    background:none; border:none; color:var(--walnut-soft); font-size:0.8rem; cursor:pointer;
+    font-family:'Work Sans',sans-serif; text-decoration:underline;
   }
   .auth-gate-pendiente{ text-align:center; }
   .auth-gate-pendiente .icono{ font-size:2.4rem; margin-bottom:10px; }
@@ -1726,6 +1740,19 @@
     return permisosActuales.includes(clave);
   }
 
+  // Botón de mostrar/ocultar contraseña — funciona para cualquier input con esta clase,
+  // delegado en document porque los campos de login/registro se recrean dinámicamente.
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.password-toggle-btn');
+    if(!btn) return;
+    const input = document.getElementById(btn.dataset.target);
+    if(!input) return;
+    const oculto = input.type === 'password';
+    input.type = oculto ? 'text' : 'password';
+    btn.textContent = oculto ? '🙈' : '👁️';
+    btn.setAttribute('aria-label', oculto ? 'Ocultar contraseña' : 'Mostrar contraseña');
+  });
+
   // Si el usuario NO es dueño y su rol no tiene "ver_todos_proyectos",
   // solo debe ver los proyectos donde su id esté dentro de instaladores_ids.
   function soloVeProyectosAsignados(){
@@ -1782,6 +1809,30 @@
       headers: { 'Prefer': 'return=minimal' },
       body: JSON.stringify({ id, nombre: nombre || '', email, rol_id: null, activo: true, es_dueno: esElPrimero })
     });
+  }
+
+  async function solicitarRecuperacionContrasena(email){
+    const redirectTo = encodeURIComponent(location.origin + location.pathname);
+    const res = await fetch(SUPABASE_URL + '/auth/v1/recover?redirect_to=' + redirectTo, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if(!res.ok){
+      let data = {};
+      try{ data = await res.json(); } catch(err){}
+      throw new Error(data.error_description || data.msg || 'No se pudo enviar el correo de recuperación.');
+    }
+  }
+
+  async function establecerNuevaContrasena(accessToken, password){
+    const res = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      method: 'PUT',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error_description || data.msg || 'No se pudo actualizar la contraseña.');
   }
 
   async function registrarCuenta(email, password, nombre){
@@ -1880,9 +1931,13 @@
       </div>
       <div class="presu-group">
         <label>Contraseña</label>
-        <input type="password" id="authPassword" placeholder="••••••••">
+        <div class="password-field-wrap">
+          <input type="password" id="authPassword" placeholder="••••••••">
+          <button type="button" class="password-toggle-btn" data-target="authPassword" aria-label="Mostrar contraseña">👁️</button>
+        </div>
       </div>
       <button type="button" class="presu-btn-generar" id="authBtnLogin">Entrar</button>
+      <div class="auth-gate-olvide"><button type="button" id="authIrRecuperar">¿Olvidaste tu contraseña?</button></div>
       <div class="auth-gate-switch">¿No tienes cuenta? <button type="button" id="authIrRegistro">Crear cuenta</button></div>
     `;
     document.getElementById('authBtnLogin').addEventListener('click', async ()=>{
@@ -1902,6 +1957,84 @@
       }
     });
     document.getElementById('authIrRegistro').addEventListener('click', mostrarRegistro);
+    document.getElementById('authIrRecuperar').addEventListener('click', mostrarRecuperar);
+  }
+
+  function mostrarRecuperar(){
+    mostrarGate();
+    const card = document.getElementById('authGateCard');
+    card.innerHTML = `
+      <h1>Recuperar contraseña</h1>
+      <p class="auth-sub">Escribe tu email y te mandamos un enlace para poner una contraseña nueva.</p>
+      <div id="authErrorRecuperar"></div>
+      <div class="presu-group">
+        <label>Email</label>
+        <input type="email" id="recuperarEmail" placeholder="tucorreo@ejemplo.com">
+      </div>
+      <button type="button" class="presu-btn-generar" id="authBtnRecuperar">Enviar enlace</button>
+      <div class="auth-gate-switch">¿Ya te acordaste? <button type="button" id="authIrLoginDesdeRecuperar">Iniciar sesión</button></div>
+    `;
+    document.getElementById('authBtnRecuperar').addEventListener('click', async ()=>{
+      const email = document.getElementById('recuperarEmail').value.trim();
+      const errorEl = document.getElementById('authErrorRecuperar');
+      const btn = document.getElementById('authBtnRecuperar');
+      errorEl.innerHTML = '';
+      if(!email){
+        errorEl.innerHTML = '<div class="auth-gate-error">Escribe tu email.</div>';
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Enviando…';
+      try{
+        await solicitarRecuperacionContrasena(email);
+        card.innerHTML = `
+          <h1>Revisa tu correo</h1>
+          <p class="auth-sub">Si ese email tiene una cuenta, te llegó un enlace para poner una contraseña nueva. Ábrelo desde este mismo teléfono.</p>
+          <div class="auth-gate-switch"><button type="button" id="authIrLoginDesdeRecuperar2">Volver a iniciar sesión</button></div>
+        `;
+        document.getElementById('authIrLoginDesdeRecuperar2').addEventListener('click', mostrarLogin);
+      } catch(err){
+        errorEl.innerHTML = `<div class="auth-gate-error">${escapeHtml(err.message)}</div>`;
+        btn.disabled = false; btn.textContent = 'Enviar enlace';
+      }
+    });
+    document.getElementById('authIrLoginDesdeRecuperar').addEventListener('click', mostrarLogin);
+  }
+
+  function mostrarNuevaContrasena(accessToken){
+    mostrarGate();
+    const card = document.getElementById('authGateCard');
+    card.innerHTML = `
+      <h1>Nueva contraseña</h1>
+      <p class="auth-sub">Escribe la contraseña nueva de tu cuenta.</p>
+      <div id="authErrorNueva"></div>
+      <div class="presu-group">
+        <label>Contraseña nueva</label>
+        <div class="password-field-wrap">
+          <input type="password" id="nuevaPassword" placeholder="Mínimo 6 caracteres">
+          <button type="button" class="password-toggle-btn" data-target="nuevaPassword" aria-label="Mostrar contraseña">👁️</button>
+        </div>
+      </div>
+      <button type="button" class="presu-btn-generar" id="authBtnNuevaPassword">Guardar contraseña</button>
+    `;
+    document.getElementById('authBtnNuevaPassword').addEventListener('click', async ()=>{
+      const password = document.getElementById('nuevaPassword').value;
+      const errorEl = document.getElementById('authErrorNueva');
+      const btn = document.getElementById('authBtnNuevaPassword');
+      errorEl.innerHTML = '';
+      if(!password || password.length < 6){
+        errorEl.innerHTML = '<div class="auth-gate-error">Mínimo 6 caracteres.</div>';
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Guardando…';
+      try{
+        await establecerNuevaContrasena(accessToken, password);
+        toast('Contraseña actualizada. Ya puedes iniciar sesión con ella.');
+        mostrarLogin();
+      } catch(err){
+        errorEl.innerHTML = `<div class="auth-gate-error">${escapeHtml(err.message)}</div>`;
+        btn.disabled = false; btn.textContent = 'Guardar contraseña';
+      }
+    });
   }
 
   function mostrarRegistro(){
@@ -1921,7 +2054,10 @@
       </div>
       <div class="presu-group">
         <label>Contraseña</label>
-        <input type="password" id="regPassword" placeholder="Mínimo 6 caracteres">
+        <div class="password-field-wrap">
+          <input type="password" id="regPassword" placeholder="Mínimo 6 caracteres">
+          <button type="button" class="password-toggle-btn" data-target="regPassword" aria-label="Mostrar contraseña">👁️</button>
+        </div>
       </div>
       <button type="button" class="presu-btn-generar" id="authBtnRegistro">Crear cuenta</button>
       <div class="auth-gate-switch">¿Ya tienes cuenta? <button type="button" id="authIrLogin">Iniciar sesión</button></div>
@@ -5650,7 +5786,23 @@ ${utilidadNeta >= 0 ? 'Tu negocio está dejando ganancia por encima de los gasto
 
   cargarAjustesConfig();
   cargarInicioFeed();
-  evaluarAcceso();
+
+  // Cuando el usuario toca el enlace del correo de recuperación, Supabase lo trae
+  // de vuelta con #access_token=...&type=recovery en la URL. Si detectamos eso,
+  // mostramos la pantalla de "nueva contraseña" en vez del arranque normal.
+  (function revisarEnlaceRecuperacion(){
+    const hash = location.hash || '';
+    if(hash.includes('type=recovery')){
+      const params = new URLSearchParams(hash.replace(/^#/, ''));
+      const accessToken = params.get('access_token');
+      history.replaceState(null, '', location.pathname + location.search);
+      if(accessToken){
+        mostrarNuevaContrasena(accessToken);
+        return;
+      }
+    }
+    evaluarAcceso();
+  })();
 </script>
 
 </body>
