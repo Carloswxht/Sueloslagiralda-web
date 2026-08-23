@@ -2125,6 +2125,13 @@
 
     const linkEquipo = document.getElementById('ajustesEquipoLink');
     if(linkEquipo) linkEquipo.style.display = puedeGestionarUsuarios ? 'inline-flex' : 'none';
+
+    // "Ver resumen" abre una vista con el valor en € de todos los proyectos del
+    // negocio, sin filtrar por instalador asignado — solo tiene sentido para quien
+    // pueda ver finanzas.
+    const linkTodosProyectos = document.getElementById('linkTodosProyectos');
+    const puedeVerFinanzasGlobal = (perfilActual && perfilActual.es_dueno) || tienePermiso('ver_finanzas');
+    if(linkTodosProyectos) linkTodosProyectos.style.display = puedeVerFinanzasGlobal ? 'inline-flex' : 'none';
   }
 
   document.getElementById('ajustesEquipoLink').addEventListener('click', ()=> irAVista('equipo'));
@@ -4067,12 +4074,14 @@
           </div>
           <p class="proy-card-suelo">${p.tipo_suelo || 'Sin especificar'} · ${p.metros_cuadrados ? p.metros_cuadrados + ' m²' : '— m²'}</p>
           ${p.ultima_actividad_at ? `<p class="proy-card-actividad">🕒 ${p.ultima_actividad_texto || 'Actividad'} · ${tiempoRelativo(p.ultima_actividad_at)}</p>` : ''}
+          ${((perfilActual && perfilActual.es_dueno) || tienePermiso('ver_finanzas')) ? `
           <div class="proy-card-stats">
             <div class="proy-stat"><span class="proy-stat-label">Valor</span><span class="proy-stat-valor">${euros(ingreso)}</span></div>
             <div class="proy-stat"><span class="proy-stat-label">Abonos</span><span class="proy-stat-valor positiva">${euros(abono)}</span></div>
             <div class="proy-stat"><span class="proy-stat-label">Gastos</span><span class="proy-stat-valor negativa">${euros(gasto)}</span></div>
             <div class="proy-stat"><span class="proy-stat-label">Utilidad</span><span class="proy-stat-valor ${utilidad >= 0 ? 'positiva':'negativa'}">${euros(utilidad)}</span></div>
           </div>
+          ` : ''}
         </div>
       `;
     }).join('');
