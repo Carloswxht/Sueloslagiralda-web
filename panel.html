@@ -105,6 +105,24 @@
     flex:0 0 auto; font-family:'IBM Plex Mono',monospace; font-size:0.62rem; padding:3px 8px; border-radius:8px;
     text-transform:uppercase; white-space:nowrap;
   }
+  .inicio-card-obra{
+    background:var(--card); border-radius:10px; border-left:3px solid var(--line);
+    margin-bottom:10px; overflow:hidden;
+  }
+  .inicio-card-obra .inicio-card-header{
+    margin-bottom:0; border-left:none; border-radius:0; background:transparent;
+  }
+  .inicio-obra-pendientes{ padding:0 14px; }
+  .inicio-obra-pendiente-item{
+    font-family:'Work Sans',sans-serif; font-size:0.78rem; color:var(--walnut-soft);
+    padding:7px 0; border-top:1px solid var(--line);
+  }
+  .inicio-obra-pendiente-item:first-child{ border-top:1px solid var(--line); }
+  .inicio-obra-sin-pendientes{
+    font-family:'Work Sans',sans-serif; font-size:0.76rem; color:var(--walnut-soft);
+    padding:2px 0 10px; font-style:italic;
+  }
+  .inicio-card-obra .dinero-panel-row{ margin:8px 14px 14px !important; }
 
   .dinero-panel{ display:flex; flex-direction:column; gap:18px; }
   .dinero-panel-titulo{
@@ -507,6 +525,22 @@
     color:#F4EFE4; font-size:1rem; display:flex; align-items:center; justify-content:center; cursor:pointer;
   }
   .foto-lightbox-borrar:active{ background:rgba(220,80,60,0.4); }
+  .lead-foto-descargar-btn{
+    position:absolute; bottom:0; left:0; right:0; z-index:2;
+    margin:0 18px calc(18px + env(safe-area-inset-bottom));
+    padding:13px; border-radius:10px; border:none;
+    background:var(--ocre); color:var(--walnut); font-weight:700;
+    font-family:'Work Sans',sans-serif; font-size:0.92rem; cursor:pointer;
+  }
+  .lead-foto-descargar-btn:active{ opacity:0.85; }
+  .lead-foto-thumb-btn{
+    display:flex; align-items:center; gap:10px; width:calc(100% - 30px); margin:0 15px 12px;
+    padding:8px; border-radius:10px; border:1px solid var(--line); background:var(--stone-light);
+    cursor:pointer; text-align:left;
+  }
+  .lead-foto-thumb{ width:52px; height:52px; border-radius:6px; object-fit:cover; flex-shrink:0; }
+  .lead-foto-thumb-label{ font-family:'Work Sans',sans-serif; font-size:0.84rem; font-weight:600; color:var(--walnut); }
+  .lead-tag.simulador{ background:#E4D9C4; color:var(--oak-deep); }
 
   /* ---------- PROYECTOS ---------- */
   .pd-link{
@@ -1604,6 +1638,16 @@
   </div>
 </div>
 
+<!-- ===================== VISOR DE FOTO DE LEAD (simulador) ===================== -->
+<div class="foto-lightbox" id="leadFotoOverlay">
+  <div class="foto-lightbox-chrome">
+    <span></span>
+    <button type="button" class="foto-lightbox-cerrar" id="leadFotoCerrar" aria-label="Cerrar">✕</button>
+  </div>
+  <img id="leadFotoImg" src="" alt="Foto del suelo del cliente">
+  <button type="button" class="lead-foto-descargar-btn" id="leadFotoDescargar">⬇️ Descargar foto</button>
+</div>
+
 <!-- ===================== VISOR DE FOTO AMPLIADA ===================== -->
 <div class="foto-lightbox" id="fotoLightboxOverlay">
   <div class="foto-lightbox-chrome" id="fotoLightboxChrome">
@@ -2269,6 +2313,43 @@
     }[estado] || 'nuevo';
   }
 
+  function abrirLeadFotoVisor(url){
+    document.getElementById('leadFotoImg').src = url;
+    document.getElementById('leadFotoOverlay').classList.add('open');
+  }
+  function cerrarLeadFotoVisor(){
+    document.getElementById('leadFotoOverlay').classList.remove('open');
+    document.getElementById('leadFotoImg').src = '';
+  }
+  document.getElementById('leadFotoCerrar').addEventListener('click', cerrarLeadFotoVisor);
+  document.getElementById('leadFotoOverlay').addEventListener('click', (e)=>{
+    if(e.target.id === 'leadFotoOverlay') cerrarLeadFotoVisor();
+  });
+  document.getElementById('leadFotoDescargar').addEventListener('click', async ()=>{
+    const url = document.getElementById('leadFotoImg').src;
+    if(!url) return;
+    const btn = document.getElementById('leadFotoDescargar');
+    const textoOriginal = btn.textContent;
+    btn.textContent = 'Descargando…';
+    try{
+      // Se descarga como blob (en vez de un enlace directo) para que el navegador
+      // guarde el archivo de verdad, en lugar de solo abrir la imagen en otra pestaña.
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'foto-suelo-cliente.jpg';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch(err){
+      toast('No se pudo descargar. Mantén presionada la foto para guardarla manualmente.');
+    }
+    btn.textContent = textoOriginal;
+  });
+
   function formatearFecha(iso){
     const d = new Date(iso);
     const hoy = new Date();
@@ -2400,6 +2481,7 @@
 
     listEl.innerHTML = filtrados.map(l => {
       const esPresupuesto = l.formulario === 'Presupuesto';
+      const esSimulador = l.formulario === 'Simulador';
       const totalRapido = esPresupuesto ? calcularPresupuestoRapidoLead(l) : null;
 
       let respuestasHtml = '';
@@ -2412,6 +2494,8 @@
           <div class="lead-respuesta-item"><span>Rodapié nuevo</span><b>${escapeHtml(l.rodapies) || 'No'}</b></div>
           <div class="lead-respuesta-item"><span>Ayuda con muebles</span><b>${escapeHtml(l.muebles_pesados) || 'No'}</b></div>
         `;
+      } else if(esSimulador){
+        respuestasHtml = `<div class="lead-respuesta-item"><span>Para cuándo</span><b>${escapeHtml(l.plazo) || '—'}</b></div>`;
       } else {
         respuestasHtml = `<div class="lead-respuesta-item"><span>Zona</span><b>${escapeHtml(l.zona) || '—'}</b></div>`;
       }
@@ -2420,7 +2504,7 @@
         <div class="lead-card ${claseEstado(l.estado)}" data-id="${l.id}">
           <div class="lead-top">
             <div class="lead-top-izq">
-              <span class="lead-tag ${esPresupuesto ? 'presupuesto' : 'visita-tecnica'}">${l.formulario}</span>
+              <span class="lead-tag ${esPresupuesto ? 'presupuesto' : (esSimulador ? 'simulador' : 'visita-tecnica')}">${l.formulario}</span>
               <h3 class="lead-nombre">${escapeHtml(l.nombre) || '(sin nombre)'}</h3>
             </div>
             <div class="lead-top-der">
@@ -2435,6 +2519,13 @@
               <span class="lead-fecha">${formatearFecha(l.created_at)}</span>
             </div>
           </div>
+
+          ${l.foto_url ? `
+            <button type="button" class="lead-foto-thumb-btn" data-foto="${escapeHtml(l.foto_url)}">
+              <img src="${escapeHtml(l.foto_url)}" alt="Foto del suelo actual" class="lead-foto-thumb" loading="lazy">
+              <span class="lead-foto-thumb-label">📷 Ver foto del suelo actual</span>
+            </button>
+          ` : ''}
 
           <div class="lead-respuestas">${respuestasHtml}</div>
 
@@ -2458,6 +2549,10 @@
     }).join('');
 
     listEl.querySelectorAll('.lead-card').forEach(card=>{
+      const fotoBtn = card.querySelector('.lead-foto-thumb-btn');
+      if(fotoBtn){
+        fotoBtn.addEventListener('click', ()=> abrirLeadFotoVisor(fotoBtn.dataset.foto));
+      }
       const badge = card.querySelector('.proy-badge-click');
       const estadoMenu = card.querySelector('.proy-estado-menu');
       if(badge && estadoMenu){
@@ -3851,20 +3946,67 @@
     }
 
     feedEl.innerHTML = '<div class="inicio-feed-titulo">Tu obra de hoy</div>' + misProyectos.map(p => `
-      <div class="inicio-card obra-hoy" data-id="${p.id}">
-        <div class="inicio-card-info">
-          <span class="inicio-card-nombre">${escapeHtml(p.nombre)}</span>
-          <span class="inicio-card-detalle">${escapeHtml(p.direccion) || p.tipo_suelo || 'Ver detalle'}${conteoPendientes[p.nombre] ? ` · ${conteoPendientes[p.nombre]} pendiente${conteoPendientes[p.nombre] === 1 ? '' : 's'}` : ''}</span>
+      <div class="inicio-card-obra" data-id="${p.id}">
+        <div class="inicio-card obra-hoy inicio-card-header" data-id="${p.id}">
+          <div class="inicio-card-info">
+            <span class="inicio-card-nombre">${escapeHtml(p.nombre)}</span>
+            <span class="inicio-card-detalle">${escapeHtml(p.direccion) || p.tipo_suelo || 'Ver detalle'}</span>
+          </div>
+          <span class="inicio-card-tag" style="background:var(--stone); color:var(--walnut-soft);">${ESTADO_PROYECTO_LABEL[p.estado] || p.estado}</span>
         </div>
-        <span class="inicio-card-tag" style="background:var(--stone); color:var(--walnut-soft);">${ESTADO_PROYECTO_LABEL[p.estado] || p.estado}</span>
+        <div class="inicio-obra-pendientes" id="inicioPendientes-${p.id}"><div class="loading" style="padding:8px 4px;">Cargando pendientes…</div></div>
+        <div class="dinero-panel-row">
+          <button type="button" class="pd-link inicio-obra-foto" data-id="${p.id}" style="margin:0; flex:1; justify-content:center;">📷 Foto</button>
+          <button type="button" class="pd-link inicio-obra-ingreso" data-id="${p.id}" style="margin:0; flex:1; justify-content:center; background:#DCEEDD; border-color:#BFE0C4; color:#2C6B3F;">➕ Ingreso</button>
+          <button type="button" class="pd-link inicio-obra-gasto" data-id="${p.id}" style="margin:0; flex:1; justify-content:center; background:#F5DBD8; border-color:#E9B9B2; color:var(--red);">➖ Gasto</button>
+        </div>
       </div>
     `).join('');
 
-    feedEl.querySelectorAll('.inicio-card[data-id]').forEach(card=>{
+    feedEl.querySelectorAll('.inicio-card-header[data-id]').forEach(card=>{
       card.addEventListener('click', ()=>{
         const proyecto = misProyectos.find(p => String(p.id) === card.dataset.id);
         if(proyecto) abrirProyectoDetalle(proyecto);
       });
+    });
+    feedEl.querySelectorAll('.inicio-obra-foto').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const proyecto = misProyectos.find(p => String(p.id) === btn.dataset.id);
+        if(!proyecto) return;
+        // Ya sabemos a qué proyecto pertenece la foto (el de esta tarjeta), así que
+        // saltamos el selector de proyecto y abrimos la cámara directo.
+        proyectoSeleccionadoObra = proyecto.nombre;
+        fotoObraInputCamara.click();
+      });
+    });
+    feedEl.querySelectorAll('.inicio-obra-ingreso').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const proyecto = misProyectos.find(p => String(p.id) === btn.dataset.id);
+        if(proyecto) abrirDineroDesdeProyecto('ingreso', proyecto);
+      });
+    });
+    feedEl.querySelectorAll('.inicio-obra-gasto').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const proyecto = misProyectos.find(p => String(p.id) === btn.dataset.id);
+        if(proyecto) abrirDineroDesdeProyecto('gasto', proyecto);
+      });
+    });
+
+    // La lista de pendientes de cada proyecto se carga aparte y se rellena cuando llega,
+    // para no bloquear el resto del Inicio mientras Supabase responde.
+    misProyectos.forEach(async (p)=>{
+      const contenedor = document.getElementById('inicioPendientes-' + p.id);
+      if(!contenedor) return;
+      const pendientes = await fetchPendientesDeProyecto(p.nombre);
+      if(pendientes.length === 0){
+        contenedor.innerHTML = '<p class="inicio-obra-sin-pendientes">Sin pendientes por resolver.</p>';
+        return;
+      }
+      contenedor.innerHTML = pendientes.map(pe => `
+        <div class="inicio-obra-pendiente-item">
+          <span>📝 ${escapeHtml(pe.categoria)}${pe.nota ? ' — ' + escapeHtml(pe.nota) : ''}</span>
+        </div>
+      `).join('');
     });
   }
 
@@ -3981,12 +4123,10 @@
         ? todos.filter(p => Array.isArray(p.instaladores_ids) && p.instaladores_ids.includes(sesionActual && sesionActual.user.id))
         : todos;
 
-      if((perfilActual && perfilActual.es_dueno) || tienePermiso('asignar_instalador')){
-        try{
-          const resEquipo = await fetchAutenticado('/rest/v1/usuarios_perfil?select=id,nombre&activo=eq.true&order=nombre.asc');
-          equipoParaAsignarCache = resEquipo.ok ? await resEquipo.json() : [];
-        } catch(err){ equipoParaAsignarCache = []; }
-      }
+      try{
+        const resEquipo = await fetchAutenticado('/rest/v1/usuarios_perfil?select=id,nombre&activo=eq.true&order=nombre.asc');
+        equipoParaAsignarCache = resEquipo.ok ? await resEquipo.json() : [];
+      } catch(err){ equipoParaAsignarCache = []; }
 
       gastoPorProyectoCache = {};
       gastosTodos.forEach(g=>{
@@ -4061,7 +4201,9 @@
                   ${equipoParaAsignarCache.map(u => `<button type="button" class="proy-instalador-menu-item ${Array.isArray(p.instaladores_ids) && p.instaladores_ids.includes(u.id) ? 'active' : ''}" data-instalador-id="${u.id}">${Array.isArray(p.instaladores_ids) && p.instaladores_ids.includes(u.id) ? '✓ ' : ''}${escapeHtml(u.nombre) || '(sin nombre)'}</button>`).join('')}
                   <button type="button" class="proy-instalador-menu-item proy-instalador-limpiar" data-instalador-id="">Quitar todos</button>
                 </div>
-              </div>` : ''}
+              </div>` : `
+              <span class="proy-badge instalador">👷 ${escapeHtml(nombresInstaladores(p.instaladores_ids)) || 'Sin asignar'}</span>
+              `}
               <div class="proy-iconos-fila">
                 <button type="button" class="proy-camara-btn proy-msg-btn" aria-label="Enviar mensaje de WhatsApp al cliente">💬</button>
                 <button type="button" class="proy-camara-btn proy-pdf-btn" aria-label="Enviar PDF por WhatsApp">📄</button>
@@ -4240,8 +4382,15 @@
 
   async function cargarProyectoDetalle(proyecto){
     document.getElementById('proyectoDetalleTitulo').textContent = proyecto.nombre;
+    if(equipoParaAsignarCache.length === 0){
+      try{
+        const resEquipo = await fetchAutenticado('/rest/v1/usuarios_perfil?select=id,nombre&activo=eq.true&order=nombre.asc');
+        equipoParaAsignarCache = resEquipo.ok ? await resEquipo.json() : [];
+      } catch(err){ /* si falla, el subtítulo simplemente no mostrará el instalador */ }
+    }
+    const instaladoresTexto = nombresInstaladores(proyecto.instaladores_ids) || 'Sin instalador asignado';
     document.getElementById('proyectoDetalleSubtitulo').textContent =
-      `${proyecto.tipo_suelo || 'Sin especificar'} · ${proyecto.metros_cuadrados ? proyecto.metros_cuadrados + ' m²' : '— m²'} · ${ESTADO_PROYECTO_LABEL[proyecto.estado] || proyecto.estado}`;
+      `${proyecto.tipo_suelo || 'Sin especificar'} · ${proyecto.metros_cuadrados ? proyecto.metros_cuadrados + ' m²' : '— m²'} · ${ESTADO_PROYECTO_LABEL[proyecto.estado] || proyecto.estado} · 👷 ${instaladoresTexto}`;
     const contenedor = document.getElementById('proyectoDetalleContenido');
     contenedor.innerHTML = '<div class="loading">Cargando…</div>';
     try{

@@ -60,12 +60,6 @@
   }
   .brand .word-oak{ color:var(--ocre); }
   .brand .word-cream{ color:var(--stone-light); }
-  nav ul{ display:flex; gap:28px; list-style:none; }
-  nav ul li a{
-    font-size:0.92rem; font-weight:500; text-decoration:none;
-    color:#CFC5B5; transition:color .2s;
-  }
-  nav ul li a:hover{color:var(--ocre);}
   .btn{
     display:inline-flex; align-items:center; gap:8px;
     padding:11px 20px; border-radius:2px;
@@ -80,37 +74,6 @@
     box-shadow:0 10px 26px rgba(51,84,77,0.28);
   }
   .btn-wa:hover{ background:#284440; transform:translateY(-1px); box-shadow:0 14px 32px rgba(51,84,77,0.38); }
-  .menu-toggle{
-    display:none; position:relative;
-    width:40px; height:40px; border-radius:10px;
-    background:none; border:none; cursor:pointer;
-    transition:background .15s ease; flex-shrink:0;
-  }
-  .menu-toggle:hover, .menu-toggle:active{ background:rgba(244,239,228,0.10); }
-  .menu-toggle span{
-    position:absolute; left:50%; transform:translateX(-50%);
-    width:20px; height:2px; border-radius:2px; background:var(--stone-light);
-    transition:transform .25s ease, opacity .2s ease, width .2s ease, top .2s ease;
-  }
-  .menu-toggle span:nth-child(1){ top:14px; }
-  .menu-toggle span:nth-child(2){ top:19px; width:14px; }
-  .menu-toggle span:nth-child(3){ top:24px; }
-  .menu-toggle.open span:nth-child(1){ top:19px; width:20px; transform:translateX(-50%) rotate(45deg); }
-  .menu-toggle.open span:nth-child(2){ opacity:0; width:0; }
-  .menu-toggle.open span:nth-child(3){ top:19px; width:20px; transform:translateX(-50%) rotate(-45deg); }
-  @media (max-width:860px){
-    .nav{ justify-content:flex-start; gap:14px; }
-    .menu-toggle{ display:inline-block; }
-    nav#mainNav{
-      position:fixed; top:65px; left:0; right:0; z-index:49;
-      background:var(--walnut); border-bottom:1px solid rgba(255,255,255,0.08);
-      max-height:0; overflow:hidden; transition:max-height .3s ease;
-    }
-    nav#mainNav.open{ max-height:520px; }
-    nav#mainNav ul{ display:flex; flex-direction:column; gap:0; padding:8px 28px 20px; }
-    nav#mainNav ul li{ border-bottom:1px solid rgba(255,255,255,0.06); }
-    nav#mainNav ul li a{ display:block; padding:14px 0; }
-  }
 
   /* ---------- HERO DEL SIMULADOR ---------- */
   .sim-hero{
@@ -184,6 +147,23 @@
     cursor:pointer; margin-top:14px; text-decoration:underline;
   }
 
+  .sim-opcion{
+    display:flex; align-items:center; gap:12px; width:100%;
+    padding:14px 15px; margin-bottom:10px; border-radius:6px; border:1px solid var(--line);
+    background:#fff; font-family:'Work Sans',sans-serif; font-size:0.95rem; color:var(--walnut);
+    cursor:pointer; text-align:left; transition:border-color .15s ease, background .15s ease;
+  }
+  .sim-opcion:hover{ border-color:var(--ocre); }
+  .sim-opcion.activa{ border-color:var(--ocre); background:rgba(192,147,46,0.08); font-weight:600; }
+  .sim-opcion-circulo{
+    width:18px; height:18px; border-radius:50%; border:2px solid var(--line); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sim-opcion.activa .sim-opcion-circulo{ border-color:var(--ocre); }
+  .sim-opcion.activa .sim-opcion-circulo::after{
+    content:""; width:9px; height:9px; border-radius:50%; background:var(--ocre);
+  }
+
   .sim-exito{ text-align:center; padding:8px 0; }
   .sim-exito-icon{ font-size:2.6rem; margin-bottom:14px; }
   .sim-exito h3{ font-size:1.3rem; margin-bottom:10px; }
@@ -228,24 +208,6 @@
     .footer-grid{grid-template-columns:1fr 1fr;}
   }
 
-  .float-wa{
-    position:fixed; bottom:24px; right:24px; z-index:60;
-    background:var(--azulejo); color:#fff; width:58px; height:58px; border-radius:50%;
-    display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow);
-    text-decoration:none; transition:transform .15s ease, box-shadow .15s ease;
-  }
-  .float-wa:hover{transform:scale(1.07); box-shadow:0 16px 34px rgba(42,33,24,0.28);}
-  .float-wa svg{ width:26px; height:26px; }
-  .float-wa::before{
-    content:""; position:absolute; inset:0; border-radius:50%;
-    border:2px solid var(--azulejo);
-    animation: wa-pulse 2.2s cubic-bezier(.4,0,.3,1) infinite;
-  }
-  @keyframes wa-pulse{
-    0%{ transform:scale(1); opacity:0.55; }
-    100%{ transform:scale(1.55); opacity:0; }
-  }
-
   @media (max-width:640px){
     .sim-hero{ padding:48px 0 4px; }
     .sim-card{ margin-top:26px; padding:24px 18px 22px; }
@@ -256,28 +218,11 @@
 
 <header>
   <div class="nav">
-    <button id="menuToggle" class="menu-toggle" aria-label="Abrir menú">
-      <span></span><span></span><span></span>
-    </button>
     <div class="brand">
       <span class="word-cream">Suelos</span>
       <span class="word-oak">La</span>
       <span class="word-oak">Giralda</span>
     </div>
-    <nav id="mainNav">
-      <ul>
-        <li><a href="index.html#asesor">Asesor de Suelo</a></li>
-        <li><a href="index.html#presupuesto">Presupuesto personalizado</a></li>
-        <li><a href="index.html#servicios">Materiales</a></li>
-        <li><a href="index.html#proceso">Cómo trabajamos</a></li>
-        <li><a href="index.html#contacto">Pide tu visita técnica</a></li>
-        <li><a href="index.html#quienes-somos">Quiénes somos</a></li>
-        <li><a href="index.html#antes-despues">Últimos trabajos</a></li>
-        <li><a href="index.html#opiniones">Testimonio, clientes reales</a></li>
-        <li><a href="index.html#por-que-elegirnos">Por qué elegirnos</a></li>
-        <li><a href="index.html#faq">Preguntas frecuentes</a></li>
-      </ul>
-    </nav>
   </div>
 </header>
 
@@ -285,7 +230,7 @@
   <div class="wrap">
     <span class="sim-eyebrow">Simulador gratuito</span>
     <h1 class="sim-title">¿Y si vieras tu salón con <em>suelo nuevo</em> antes de decidir?</h1>
-    <p class="sim-sub">Sube una foto de tu suelo actual y te enviamos una simulación por WhatsApp de cómo quedaría con el material que elijas.</p>
+    <p class="sim-sub">Sube una foto de tu suelo actual y te enviamos una simulación por WhatsApp con el suelo que mejor combine con tu espacio.</p>
   </div>
 </section>
 
@@ -362,34 +307,17 @@
   </div>
 </footer>
 
-<a href="https://wa.me/34605288673" class="float-wa" aria-label="WhatsApp">
-  <svg viewBox="0 0 32 32" fill="currentColor"><path d="M16.004 3C9.377 3 4 8.373 4 15c0 2.34.664 4.523 1.813 6.375L4 29l7.828-1.766A11.94 11.94 0 0 0 16.004 27C22.63 27 28 21.627 28 15S22.63 3 16.004 3Zm6.98 16.982c-.29.816-1.44 1.5-2.36 1.695-.628.13-1.448.234-4.207-.902-3.53-1.453-5.8-5.02-5.977-5.254-.17-.234-1.43-1.902-1.43-3.629 0-1.727.898-2.574 1.219-2.926.32-.352.7-.44.933-.44.234 0 .469.004.672.014.215.01.504-.082.789.6.29.7.984 2.426 1.07 2.602.086.176.144.383.03.617-.117.234-.175.383-.35.586-.176.203-.367.453-.524.61-.176.175-.36.363-.156.71.203.352.902 1.492 1.938 2.418 1.332 1.192 2.457 1.562 2.808 1.738.352.176.559.148.766-.09.207-.238.879-1.023 1.113-1.375.234-.352.469-.293.789-.176.32.117 2.043.965 2.394 1.14.352.176.586.262.672.41.086.148.086.859-.203 1.676Z"/></svg>
-</a>
-
 <script>
   const SUPABASE_URL = 'https://abrumjkwcwsftdgcruvr.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_IS8ZPhOtH1F4HemveDU3bg_8JOc8j8F';
   const STORAGE_BUCKET = 'fotos-obra';
 
-  // ---------- Menú hamburguesa (idéntico al index) ----------
-  const menuToggle = document.getElementById('menuToggle');
-  const mainNav = document.getElementById('mainNav');
-  if(menuToggle){
-    menuToggle.addEventListener('click', ()=>{
-      menuToggle.classList.toggle('open');
-      mainNav.classList.toggle('open');
-    });
-    mainNav.querySelectorAll('a').forEach(link=>{
-      link.addEventListener('click', ()=>{
-        menuToggle.classList.remove('open');
-        mainNav.classList.remove('open');
-      });
-    });
-  }
-
   // ---------- Estado del simulador ----------
   let simArchivo = null;
   let simFotoUrlSubida = null;
+  let simPlazo = null;
+  let simNombreValor = '';
+  let simTelefonoValor = '';
 
   function escapeHtml(texto){
     if(texto == null) return '';
@@ -403,7 +331,7 @@
   function renderPasoFoto(){
     const card = document.getElementById('simCard');
     card.innerHTML = `
-      <div class="sim-step-label">Paso 1 de 2</div>
+      <div class="sim-step-label">Paso 1 de 3</div>
       <h2 class="sim-step-title">Sube una foto de tu salón</h2>
       <div class="drop-zone" id="simDropZone">
         <div class="drop-zone-icon">📷</div>
@@ -419,6 +347,41 @@
       const file = input.files[0];
       if(!file) return;
       simArchivo = file;
+      renderPasoTiempo();
+    });
+  }
+
+  function renderPasoTiempo(){
+    const card = document.getElementById('simCard');
+    const opciones = ['Lo antes posible', 'En los próximos meses', 'Todavía lo estoy pensando'];
+    card.innerHTML = `
+      <div class="sim-step-label">Paso 2 de 3</div>
+      <h2 class="sim-step-title">¿Para cuándo te gustaría cambiarlo?</h2>
+      ${opciones.map(op => `
+        <button type="button" class="sim-opcion ${simPlazo === op ? 'activa' : ''}" data-plazo="${escapeHtml(op)}">
+          <span class="sim-opcion-circulo"></span>
+          <span>${escapeHtml(op)}</span>
+        </button>
+      `).join('')}
+      <button type="button" class="btn btn-primary sim-btn-enviar" id="simContinuar" style="margin-top:8px;">Continuar</button>
+      <p class="sim-status" id="simStatus"></p>
+      <button type="button" class="sim-back" id="simVolverFoto">← Elegir otra foto</button>
+    `;
+    card.querySelectorAll('.sim-opcion').forEach(op=>{
+      op.addEventListener('click', ()=>{
+        card.querySelectorAll('.sim-opcion').forEach(o => o.classList.remove('activa'));
+        op.classList.add('activa');
+        simPlazo = op.dataset.plazo;
+      });
+    });
+    document.getElementById('simVolverFoto').addEventListener('click', renderPasoFoto);
+    document.getElementById('simContinuar').addEventListener('click', ()=>{
+      const statusEl = document.getElementById('simStatus');
+      if(!simPlazo){
+        statusEl.textContent = 'Elige una opción para continuar.';
+        statusEl.className = 'sim-status sim-status-error';
+        return;
+      }
       renderPasoDatos();
     });
   }
@@ -427,7 +390,7 @@
     const card = document.getElementById('simCard');
     const previewUrl = URL.createObjectURL(simArchivo);
     card.innerHTML = `
-      <div class="sim-step-label">Paso 2 de 2</div>
+      <div class="sim-step-label">Paso 3 de 3</div>
       <h2 class="sim-step-title">¿A quién le enviamos la simulación?</h2>
       <div class="sim-preview">
         <img src="${previewUrl}" alt="Foto de tu salón">
@@ -435,19 +398,23 @@
       </div>
       <div class="sim-group">
         <label>Tu nombre</label>
-        <input type="text" id="simNombre" placeholder="Nombre y apellido">
+        <input type="text" id="simNombre" placeholder="Nombre y apellido" value="${escapeHtml(simNombreValor)}">
       </div>
       <div class="sim-group">
         <label>WhatsApp donde te enviamos la simulación</label>
-        <input type="tel" id="simTelefono" placeholder="600 000 000">
+        <input type="tel" id="simTelefono" placeholder="600 000 000" value="${escapeHtml(simTelefonoValor)}">
       </div>
       <button type="button" class="btn btn-primary sim-btn-enviar" id="simEnviar">Enviar mi foto</button>
       <p class="sim-status" id="simStatus"></p>
-      <button type="button" class="sim-back" id="simVolverFoto">← Elegir otra foto</button>
+      <button type="button" class="sim-back" id="simVolverTiempo">← Volver</button>
     `;
     document.getElementById('simCambiarFoto').addEventListener('click', renderPasoFoto);
-    document.getElementById('simVolverFoto').addEventListener('click', renderPasoFoto);
-    document.getElementById('simEnviar').addEventListener('click', enviarSimulacion);
+    document.getElementById('simVolverTiempo').addEventListener('click', renderPasoTiempo);
+    document.getElementById('simEnviar').addEventListener('click', ()=>{
+      simNombreValor = document.getElementById('simNombre').value.trim();
+      simTelefonoValor = document.getElementById('simTelefono').value.trim();
+      enviarSimulacion();
+    });
   }
 
   function renderPasoExito(){
@@ -463,8 +430,8 @@
   }
 
   async function enviarSimulacion(){
-    const nombre = document.getElementById('simNombre').value.trim();
-    const telefono = document.getElementById('simTelefono').value.trim();
+    const nombre = simNombreValor;
+    const telefono = simTelefonoValor;
     const statusEl = document.getElementById('simStatus');
     const btn = document.getElementById('simEnviar');
     statusEl.textContent = '';
@@ -512,7 +479,8 @@
           formulario: 'Simulador',
           nombre: nombre || '(no indicado)',
           telefono: telefono,
-          foto_url: simFotoUrlSubida
+          foto_url: simFotoUrlSubida,
+          plazo: simPlazo || '(no indicado)'
         })
       });
       if(!resLead.ok) throw new Error('lead');
