@@ -3936,7 +3936,7 @@
     }
   }
 
-  function renderInicioFeedInstalador(feedEl, proyectosActivos, conteoPendientes){
+  function renderInicioFeedInstalador(feedEl, proyectosActivos){
     const miId = sesionActual && sesionActual.user.id;
     const misProyectos = proyectosActivos.filter(p => Array.isArray(p.instaladores_ids) && p.instaladores_ids.includes(miId));
 
@@ -4015,8 +4015,19 @@
     if(!feedEl) return;
     feedEl.innerHTML = '<div class="loading">Cargando…</div>';
     try{
-      const [proyectos, pendientesAbiertos, leadsTodos] = await Promise.all([
-        fetchProyectos(),
+      const vistaRestringida = soloVeProyectosAsignados();
+      const proyectos = await fetchProyectos();
+      const ESTADOS_FINALES = ['finalizado','cancelado','rechazado'];
+      const proyectosActivos = proyectos.filter(p => !ESTADOS_FINALES.includes(p.estado));
+
+      if(vistaRestringida){
+        // El instalador solo ve sus obras: ni pedimos leads ni el conteo global
+        // de pendientes, porque esa vista no los usa para nada.
+        renderInicioFeedInstalador(feedEl, proyectosActivos);
+        return;
+      }
+
+      const [pendientesAbiertos, leadsTodos] = await Promise.all([
         fetch(SUPABASE_URL + '/rest/v1/pendientes?resuelto=eq.false&select=proyecto', {
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         }).then(r => r.ok ? r.json() : []).catch(()=>[]),
@@ -4030,14 +4041,6 @@
         const key = pe.proyecto || '';
         conteoPendientes[key] = (conteoPendientes[key] || 0) + 1;
       });
-
-      const ESTADOS_FINALES = ['finalizado','cancelado','rechazado'];
-      const proyectosActivos = proyectos.filter(p => !ESTADOS_FINALES.includes(p.estado));
-
-      if(soloVeProyectosAsignados()){
-        renderInicioFeedInstalador(feedEl, proyectosActivos, conteoPendientes);
-        return;
-      }
 
       // 1) Proyectos con pendientes de obra por resolver
       const proyectosConPendientes = proyectosActivos.filter(p => conteoPendientes[p.nombre] > 0);
