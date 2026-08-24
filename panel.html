@@ -1955,6 +1955,7 @@
       document.body.classList.remove('auth-locked');
       gate.style.display = 'none';
       aplicarRestriccionesDePermisos();
+      cargarInicioFeed();
       const headerPerfilWrap = document.getElementById('headerPerfilWrap');
       if(headerPerfilWrap){
         const rolTexto = perfilActual.es_dueno ? 'Dueño' : (perfilActual.roles ? perfilActual.roles.nombre : 'Sin rol');
@@ -5969,7 +5970,6 @@ ${utilidadNeta >= 0 ? 'Tu negocio está dejando ganancia por encima de los gasto
 
 
   cargarAjustesConfig();
-  cargarInicioFeed();
 
   // Cuando el usuario toca el enlace del correo (recuperación o confirmación de cuenta
   // nueva), vuelve con ?token_hash=...&type=recovery|signup en la URL, o con el formato
