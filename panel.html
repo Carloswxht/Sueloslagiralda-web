@@ -1869,15 +1869,15 @@
     }
   }
 
-  async function verificarTokenRecuperacion(tokenHash){
+  async function verificarTokenRecuperacion(tokenHash, tipo){
     const res = await fetch(SUPABASE_URL + '/auth/v1/verify', {
       method: 'POST',
       headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'recovery', token_hash: tokenHash })
+      body: JSON.stringify({ type: tipo || 'recovery', token_hash: tokenHash })
     });
     const data = await res.json();
     if(!res.ok) throw new Error(data.error_description || data.msg || 'El enlace no es válido o ya caducó.');
-    return data.access_token;
+    return data;
   }
 
   async function establecerNuevaContrasena(accessToken, password){
@@ -5959,21 +5959,26 @@ ${utilidadNeta >= 0 ? 'Tu negocio está dejando ganancia por encima de los gasto
   cargarAjustesConfig();
   cargarInicioFeed();
 
-  // Cuando el usuario toca el enlace del correo de recuperación, puede volver de dos formas
-  // según cómo esté armado el enlace: con ?token_hash=...&type=recovery en la URL normal
-  // (formato nuevo, que verificamos nosotros mismos contra Supabase), o con
-  // #access_token=...&type=recovery en la parte de después del # (formato viejo/automático
-  // de Supabase). Revisamos los dos para no depender de un solo formato.
+  // Cuando el usuario toca el enlace del correo (recuperación o confirmación de cuenta
+  // nueva), vuelve con ?token_hash=...&type=recovery|signup en la URL, o con el formato
+  // viejo #access_token=...&type=recovery. Revisamos ambos para no depender de uno solo.
   (async function revisarEnlaceRecuperacion(){
     const query = new URLSearchParams(location.search);
     const tokenHash = query.get('token_hash');
     const tipoQuery = query.get('type');
-    if(tokenHash && tipoQuery === 'recovery'){
+    if(tokenHash && (tipoQuery === 'recovery' || tipoQuery === 'signup')){
       history.replaceState(null, '', location.pathname);
       try{
-        const accessToken = await verificarTokenRecuperacion(tokenHash);
-        if(accessToken){
-          mostrarNuevaContrasena(accessToken);
+        const datos = await verificarTokenRecuperacion(tokenHash, tipoQuery);
+        if(tipoQuery === 'signup'){
+          // Confirmar cuenta nueva: ya puso su contraseña al registrarse,
+          // así que solo iniciamos sesión directo, sin pedirle nada más.
+          guardarSesion({ access_token: datos.access_token, refresh_token: datos.refresh_token, user: datos.user });
+          await evaluarAcceso();
+          return;
+        }
+        if(datos.access_token){
+          mostrarNuevaContrasena(datos.access_token);
           return;
         }
       } catch(err){
