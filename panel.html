@@ -2114,6 +2114,13 @@
           <button type="button" class="password-toggle-btn" data-target="regPassword" aria-label="Mostrar contraseña">👁️</button>
         </div>
       </div>
+      <div class="presu-group">
+        <label>Repetir contraseña</label>
+        <div class="password-field-wrap">
+          <input type="password" id="regPassword2" placeholder="Escríbela de nuevo">
+          <button type="button" class="password-toggle-btn" data-target="regPassword2" aria-label="Mostrar contraseña">👁️</button>
+        </div>
+      </div>
       <button type="button" class="presu-btn-generar" id="authBtnRegistro">Crear cuenta</button>
       <div class="auth-gate-switch">¿Ya tienes cuenta? <button type="button" id="authIrLogin">Iniciar sesión</button></div>
     `;
@@ -2121,10 +2128,15 @@
       const nombre = document.getElementById('regNombre').value.trim();
       const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
+      const password2 = document.getElementById('regPassword2').value;
       const errorEl = document.getElementById('authErrorRegistro');
       errorEl.innerHTML = '';
-      if(!nombre || !email || !password){
+      if(!nombre || !email || !password || !password2){
         errorEl.innerHTML = '<div class="auth-gate-error">Completa todos los campos.</div>';
+        return;
+      }
+      if(password !== password2){
+        errorEl.innerHTML = '<div class="auth-gate-error">Las contraseñas no coinciden.</div>';
         return;
       }
       try{
