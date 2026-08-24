@@ -313,7 +313,8 @@
   const STORAGE_BUCKET = 'fotos-obra';
 
   // ---------- Estado del simulador ----------
-  let simArchivo = null;
+  let simFotoDataUrl = null;
+  let simFotoTipo = 'image/jpeg';
   let simFotoUrlSubida = null;
   let simPlazo = null;
   let simNombreValor = '';
@@ -346,14 +347,24 @@
     input.addEventListener('change', ()=>{
       const file = input.files[0];
       if(!file) return;
-      simArchivo = file;
-      renderPasoTiempo();
+      const hint = dropZone.querySelector('.drop-zone-text');
+      if(hint) hint.textContent = 'Cargando foto…';
+      const lector = new FileReader();
+      lector.onload = ()=>{
+        simFotoDataUrl = lector.result;
+        simFotoTipo = file.type || 'image/jpeg';
+        renderPasoTiempo();
+      };
+      lector.onerror = ()=>{
+        if(hint) hint.textContent = 'No se pudo leer esa foto, prueba con otra.';
+      };
+      lector.readAsDataURL(file);
     });
   }
 
   function renderPasoTiempo(){
     const card = document.getElementById('simCard');
-    const opciones = ['Lo antes posible', 'En los próximos meses', 'Todavía lo estoy pensando'];
+    const opciones = ['Todavía lo estoy pensando', 'En los próximos meses', 'Lo antes posible'];
     card.innerHTML = `
       <div class="sim-step-label">Paso 2 de 3</div>
       <h2 class="sim-step-title">¿Para cuándo te gustaría cambiarlo?</h2>
@@ -388,12 +399,11 @@
 
   function renderPasoDatos(){
     const card = document.getElementById('simCard');
-    const previewUrl = URL.createObjectURL(simArchivo);
     card.innerHTML = `
       <div class="sim-step-label">Paso 3 de 3</div>
       <h2 class="sim-step-title">¿A quién le enviamos la simulación?</h2>
       <div class="sim-preview">
-        <img src="${previewUrl}" alt="Foto de tu salón">
+        <img src="${simFotoDataUrl}" alt="Foto de tu salón">
         <button type="button" class="sim-preview-cambiar" id="simCambiarFoto">Cambiar foto</button>
       </div>
       <div class="sim-group">
@@ -404,7 +414,7 @@
         <label>WhatsApp donde te enviamos la simulación</label>
         <input type="tel" id="simTelefono" placeholder="600 000 000" value="${escapeHtml(simTelefonoValor)}">
       </div>
-      <button type="button" class="btn btn-primary sim-btn-enviar" id="simEnviar">Enviar mi foto</button>
+      <button type="button" class="btn btn-primary sim-btn-enviar" id="simEnviar">Enviar</button>
       <p class="sim-status" id="simStatus"></p>
       <button type="button" class="sim-back" id="simVolverTiempo">← Volver</button>
     `;
@@ -442,7 +452,7 @@
       statusEl.className = 'sim-status sim-status-error';
       return;
     }
-    if(!simArchivo){
+    if(!simFotoDataUrl){
       statusEl.textContent = 'Falta la foto, vuelve a elegirla.';
       statusEl.className = 'sim-status sim-status-error';
       return;
@@ -452,16 +462,18 @@
     btn.textContent = 'Enviando…';
 
     try{
-      // 1) Subir la foto al mismo bucket de Storage que usa el panel
-      const extension = (simArchivo.name.split('.').pop() || 'jpg').toLowerCase();
+      // 1) Convertir la foto (ya leída en memoria) de vuelta a bytes, y subirla
+      // al mismo bucket de Storage que usa el panel.
+      const blob = await (await fetch(simFotoDataUrl)).blob();
+      const extension = (simFotoTipo.split('/')[1] || 'jpg').toLowerCase();
       const nombreArchivo = `simulador/${Date.now()}.${extension}`;
       const resUpload = await fetch(`${SUPABASE_URL}/storage/v1/object/${STORAGE_BUCKET}/${nombreArchivo}`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
-          'Content-Type': simArchivo.type || 'image/jpeg'
+          'Content-Type': simFotoTipo
         },
-        body: simArchivo
+        body: blob
       });
       if(!resUpload.ok) throw new Error('subida');
       simFotoUrlSubida = `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${nombreArchivo}`;
@@ -490,7 +502,7 @@
       statusEl.textContent = 'No se pudo enviar. Prueba de nuevo o escríbenos por WhatsApp.';
       statusEl.className = 'sim-status sim-status-error';
       btn.disabled = false;
-      btn.textContent = 'Enviar mi foto';
+      btn.textContent = 'Enviar';
     }
   }
 
