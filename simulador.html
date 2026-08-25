@@ -137,20 +137,15 @@
   .sim-group input:focus{ outline:none; border-color:var(--ocre); }
 
   .sim-consentimiento{
-    display:flex; align-items:flex-start; gap:10px; margin:4px 0 16px; cursor:pointer;
-    font-size:0.82rem; color:var(--walnut-soft); line-height:1.4;
+    display:flex; align-items:flex-start; gap:10px; margin:16px 0 4px;
+    font-size:0.82rem; color:var(--walnut-soft); line-height:1.4; cursor:pointer;
   }
-  .sim-consentimiento input{ margin-top:2px; width:16px; height:16px; flex-shrink:0; accent-color:var(--ocre); }
+  .sim-consentimiento input{ width:18px; height:18px; flex-shrink:0; margin-top:1px; accent-color:var(--ocre); }
 
   .sim-btn-enviar{
     width:100%; justify-content:center; border:none; margin-top:6px;
   }
   .sim-status{ font-size:0.84rem; text-align:center; min-height:20px; margin-top:12px; }
-  .sim-consentimiento{
-    display:flex; align-items:flex-start; gap:10px; margin:16px 0 4px;
-    font-size:0.82rem; color:var(--walnut-soft); line-height:1.4; cursor:pointer;
-  }
-  .sim-consentimiento input{ width:18px; height:18px; flex-shrink:0; margin-top:1px; accent-color:var(--ocre); }
   .sim-status-ok{ color:var(--azulejo); font-weight:600; }
   .sim-status-error{ color:#B3401F; font-weight:600; }
   .sim-back{
@@ -428,11 +423,7 @@
       </div>
       <label class="sim-consentimiento">
         <input type="checkbox" id="simConsentimiento" ${simConsentimientoValor ? 'checked' : ''}>
-        <span>Acepto que Suelos La Giralda use esta foto para generar mi simulación personalizada.</span>
-      </label>
-      <label class="sim-consentimiento">
-        <input type="checkbox" id="simConsentimiento">
-        <span>Acepto que Suelos La Giralda use esta foto para generar mi simulación personalizada.</span>
+        <span>Acepto que Suelos La Giralda use esta foto para generar mi simulación personalizada, y la publique en una página privada para que yo pueda verla.</span>
       </label>
       <button type="button" class="btn btn-primary sim-btn-enviar" id="simEnviar">Enviar</button>
       <p class="sim-status" id="simStatus"></p>
@@ -459,9 +450,9 @@
     card.innerHTML = `
       <div class="sim-exito">
         <div class="sim-exito-icon">✅</div>
-        <h3>¡Foto recibida!</h3>
-        <p>Preparamos tu simulación a mano y te la mandamos por WhatsApp en breve.</p>
-        <p>Mientras tanto, puedes ir mirando el resto de opciones aquí abajo.</p>
+        <h3>¡Listo, recibimos tu fotografía!</h3>
+        <p>Nuestro equipo digital hará la simulación de tu piso.</p>
+        <p>En breve te la enviaremos por WhatsApp.</p>
       </div>
     `;
   }
@@ -476,12 +467,6 @@
 
     if(!telefono){
       statusEl.textContent = 'Por favor, indica tu WhatsApp.';
-      statusEl.className = 'sim-status sim-status-error';
-      return;
-    }
-    const consentimientoEl = document.getElementById('simConsentimiento');
-    if(!consentimientoEl.checked){
-      statusEl.textContent = 'Marca la casilla para poder enviar tu foto.';
       statusEl.className = 'sim-status sim-status-error';
       return;
     }
