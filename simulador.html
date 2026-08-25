@@ -249,8 +249,8 @@
 <section class="sim-hero">
   <div class="wrap">
     <span class="sim-eyebrow">Simulador gratuito</span>
-    <h1 class="sim-title">¿Y si vieras tu salón con <em>suelo nuevo</em> antes de decidir?</h1>
-    <p class="sim-sub">Sube una foto de tu suelo actual y te enviamos una simulación por WhatsApp con el suelo que mejor combine con tu espacio.</p>
+    <h1 class="sim-title" id="simHeroTitulo">Mira tu <em>suelo nuevo</em> antes de decidir.</h1>
+    <p class="sim-sub" id="simHeroSubtitulo">Te enviamos por WhatsApp una simulación con el suelo que mejor combine con tu espacio.</p>
   </div>
 </section>
 
@@ -409,6 +409,11 @@
   }
 
   function renderPasoExito(){
+    const heroTitulo = document.getElementById('simHeroTitulo');
+    const heroSubtitulo = document.getElementById('simHeroSubtitulo');
+    if(heroTitulo) heroTitulo.style.display = 'none';
+    if(heroSubtitulo) heroSubtitulo.style.display = 'none';
+
     const card = document.getElementById('simCard');
     card.innerHTML = `
       <div class="sim-exito">
@@ -423,7 +428,7 @@
         <a href="index.html#asesor" class="sim-avance-fila sim-avance-principal">
           <div class="sim-avance-texto">
             <span class="sim-avance-pregunta">¿Aún tienes dudas de qué suelo elegir?</span>
-            <span class="sim-avance-sub">Resuélvelo en 1 minuto con nuestro Asesor de Suelo gratuito.</span>
+            <span class="sim-avance-sub">Resuélvelo en 1 minuto con nuestro Asesor de Suelo en línea, totalmente gratuito.</span>
           </div>
           <span class="sim-avance-flecha">→</span>
         </a>
