@@ -541,6 +541,12 @@
   .lead-foto-thumb{ width:52px; height:52px; border-radius:6px; object-fit:cover; flex-shrink:0; }
   .lead-foto-thumb-label{ font-family:'Work Sans',sans-serif; font-size:0.84rem; font-weight:600; color:var(--walnut); }
   .lead-tag.simulador{ background:#E4D9C4; color:var(--oak-deep); }
+  .lead-tag.manual{ background:rgba(51,84,77,0.14); color:var(--azulejo); }
+  .lead-tambien-hizo{
+    margin:0 15px 12px; padding:8px 10px; border-radius:8px;
+    background:rgba(51,84,77,0.08); color:var(--azulejo);
+    font-family:'Work Sans',sans-serif; font-size:0.78rem; line-height:1.4;
+  }
 
   .lead-simulacion{ margin:0 15px 12px; }
   .lead-simulacion-subir-btn{
@@ -992,6 +998,7 @@
   <div class="search-bar">
     <input type="text" id="searchInput" placeholder="Buscar por nombre o zona…">
   </div>
+  <button type="button" class="pd-link" id="btnNuevoLeadManual">➕ Nuevo lead manual</button>
   <div class="list" id="list">
     <div class="loading">Cargando clientes…</div>
   </div>
@@ -1656,6 +1663,28 @@
       <button type="button" class="presu-btn-generar" id="btnGuardarPendienteOtro" style="margin-top:10px;">Guardar</button>
     </div>
     <button class="foto-modal-cancelar" id="btnCancelarPendiente">Cancelar</button>
+  </div>
+</div>
+
+<!-- ===================== NUEVO LEAD MANUAL ===================== -->
+<div class="foto-modal" id="leadManualSheet">
+  <div class="foto-modal-box">
+    <h3>Nuevo lead manual</h3>
+    <p class="pendiente-sheet-proyecto">Para clientes que contactaste tú directamente, fuera de la web.</p>
+    <div class="presu-group">
+      <label>Nombre</label>
+      <input type="text" id="leadManualNombre" placeholder="Nombre y apellido">
+    </div>
+    <div class="presu-group">
+      <label>WhatsApp</label>
+      <input type="tel" id="leadManualTelefono" placeholder="600 000 000">
+    </div>
+    <div class="presu-group">
+      <label>Nota (opcional)</label>
+      <textarea id="leadManualNota" rows="3" placeholder="Ej: lo conocí en la calle, interesado en tarima para su salón"></textarea>
+    </div>
+    <button type="button" class="presu-btn-generar" id="btnGuardarLeadManual">Guardar lead</button>
+    <button class="foto-modal-cancelar" id="btnCancelarLeadManual">Cancelar</button>
   </div>
 </div>
 
@@ -2468,6 +2497,55 @@
     }
   }
 
+  function normalizarTelefono(tel){
+    let limpio = (tel || '').replace(/\D/g, '');
+    if(limpio.length > 9 && limpio.startsWith('34')) limpio = limpio.slice(2);
+    return limpio;
+  }
+
+  // Vincula cada lead con su cliente (por teléfono normalizado). Si el cliente
+  // no existe todavía, lo crea. Así los leads antiguos y los nuevos quedan
+  // conectados sin tener que tocar los formularios públicos.
+  async function vincularLeadsConClientes(listaLeads){
+    try{
+      const resClientes = await fetch(SUPABASE_URL + '/rest/v1/clientes?select=*', {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+      });
+      if(!resClientes.ok) return;
+      const clientes = await resClientes.json();
+      const porTelefono = {};
+      clientes.forEach(c => { porTelefono[c.telefono_normalizado] = c; });
+
+      for(const l of listaLeads){
+        const tel = normalizarTelefono(l.telefono);
+        if(!tel) continue;
+        let cliente = porTelefono[tel];
+        if(!cliente){
+          try{
+            const resCrear = await fetch(SUPABASE_URL + '/rest/v1/clientes', {
+              method: 'POST',
+              headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=representation' },
+              body: JSON.stringify({ telefono: l.telefono, telefono_normalizado: tel, nombre: l.nombre })
+            });
+            if(resCrear.ok){
+              const filas = await resCrear.json();
+              cliente = filas[0];
+              porTelefono[tel] = cliente;
+            }
+          } catch(err){ continue; }
+        }
+        if(cliente && l.cliente_id !== cliente.id){
+          l.cliente_id = cliente.id;
+          fetch(SUPABASE_URL + '/rest/v1/leads?id=eq.' + l.id, {
+            method: 'PATCH',
+            headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
+            body: JSON.stringify({ cliente_id: cliente.id })
+          }).catch(()=>{});
+        }
+      }
+    } catch(err){ /* si falla, los leads igual se muestran, solo sin el cruce */ }
+  }
+
   async function cargarLeads(){
     refreshBtn.classList.add('spinning');
     try{
@@ -2482,6 +2560,7 @@
       await revisarLeadsVencidos(leads);
       leadsCargados = true;
       render();
+      vincularLeadsConClientes(leads).then(()=> render());
     } catch(err){
       listEl.innerHTML = '<div class="empty"><h3>No se pudo conectar</h3><p>Revisa tu conexión e intenta de nuevo con el botón de abajo.</p></div>';
     }
@@ -2565,6 +2644,16 @@
       const esSimulador = l.formulario === 'Simulador';
       const totalRapido = esPresupuesto ? calcularPresupuestoRapidoLead(l) : null;
 
+      const otrosDelCliente = l.cliente_id
+        ? leads.filter(x => x.cliente_id === l.cliente_id && x.id !== l.id)
+        : [];
+      const tambienHizoHtml = otrosDelCliente.length ? `
+        <p class="lead-tambien-hizo">🔁 Este cliente también hizo: ${otrosDelCliente
+          .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+          .map(x => `${escapeHtml(x.formulario)} (${formatearFecha(x.created_at)})`)
+          .join(' · ')}</p>
+      ` : '';
+
       let respuestasHtml = '';
       if(esPresupuesto){
         const pisoTxt = l.estancia === 'Sin ascensor (escaleras)' && l.piso != null ? ` (piso ${l.piso})` : '';
@@ -2577,6 +2666,8 @@
         `;
       } else if(esSimulador){
         respuestasHtml = `<div class="lead-respuesta-item"><span>Para cuándo</span><b>${escapeHtml(l.plazo) || '—'}</b></div>`;
+      } else if(l.formulario === 'Manual'){
+        respuestasHtml = l.zona ? `<div class="lead-respuesta-item"><span>Nota</span><b>${escapeHtml(l.zona)}</b></div>` : '';
       } else {
         respuestasHtml = `<div class="lead-respuesta-item"><span>Zona</span><b>${escapeHtml(l.zona) || '—'}</b></div>`;
       }
@@ -2585,7 +2676,7 @@
         <div class="lead-card ${claseEstado(l.estado)}" data-id="${l.id}">
           <div class="lead-top">
             <div class="lead-top-izq">
-              <span class="lead-tag ${esPresupuesto ? 'presupuesto' : (esSimulador ? 'simulador' : 'visita-tecnica')}">${l.formulario}</span>
+              <span class="lead-tag ${esPresupuesto ? 'presupuesto' : (esSimulador ? 'simulador' : (l.formulario === 'Manual' ? 'manual' : 'visita-tecnica'))}">${l.formulario}</span>
               <h3 class="lead-nombre">${escapeHtml(l.nombre) || '(sin nombre)'}</h3>
             </div>
             <div class="lead-top-der">
@@ -2600,6 +2691,8 @@
               <span class="lead-fecha">${formatearFecha(l.created_at)}</span>
             </div>
           </div>
+
+          ${tambienHizoHtml}
 
           ${l.foto_url ? `
             <button type="button" class="lead-foto-thumb-btn" data-foto="${escapeHtml(l.foto_url)}">
@@ -3804,6 +3897,51 @@
     pendienteProyectoActivo = null;
   }
   document.getElementById('btnCancelarPendiente').addEventListener('click', cerrarPendienteSheet);
+
+  const leadManualSheet = document.getElementById('leadManualSheet');
+  const btnNuevoLeadManual = document.getElementById('btnNuevoLeadManual');
+  if(btnNuevoLeadManual){
+    btnNuevoLeadManual.addEventListener('click', ()=>{
+      document.getElementById('leadManualNombre').value = '';
+      document.getElementById('leadManualTelefono').value = '';
+      document.getElementById('leadManualNota').value = '';
+      leadManualSheet.classList.add('active');
+    });
+  }
+  document.getElementById('btnCancelarLeadManual').addEventListener('click', ()=>{
+    leadManualSheet.classList.remove('active');
+  });
+  document.getElementById('btnGuardarLeadManual').addEventListener('click', async ()=>{
+    const nombre = document.getElementById('leadManualNombre').value.trim();
+    const telefono = document.getElementById('leadManualTelefono').value.trim();
+    const nota = document.getElementById('leadManualNota').value.trim();
+    if(!telefono){
+      toast('Escribe al menos el WhatsApp del cliente.');
+      return;
+    }
+    const btn = document.getElementById('btnGuardarLeadManual');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try{
+      const res = await fetch(SUPABASE_URL + '/rest/v1/leads', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
+        body: JSON.stringify({
+          formulario: 'Manual',
+          nombre: nombre || '(no indicado)',
+          telefono: telefono,
+          zona: nota || null,
+          estado: 'Nuevo'
+        })
+      });
+      if(!res.ok) throw new Error();
+      leadManualSheet.classList.remove('active');
+      toast('Lead guardado.');
+      cargarLeads();
+    } catch(err){
+      toast('No se pudo guardar. Inténtalo de nuevo.');
+    }
+    btn.disabled = false; btn.textContent = 'Guardar lead';
+  });
 
   async function guardarPendiente(categoria, nota){
     if(!pendienteProyectoActivo) return;
