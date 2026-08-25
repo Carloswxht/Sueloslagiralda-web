@@ -2419,7 +2419,7 @@
           <img src="${escapeHtml(l.foto_resultado_url)}" alt="Foto simulada" class="lead-foto-thumb">
           <div class="lead-simulacion-acciones">
             <a href="https://wa.me/${telefono}?text=${mensaje}" target="_blank" class="lead-simulacion-btn lead-simulacion-btn-wa">💬 Enviar por WhatsApp</a>
-            <button type="button" class="lead-simulacion-btn lead-simulacion-btn-copiar" data-enlace="${escapeHtml(enlace)}">🔗 Copiar enlace</button>
+            <a href="${escapeHtml(enlace)}" target="_blank" class="lead-simulacion-btn lead-simulacion-btn-copiar">🔗 Abrir enlace</a>
           </div>
         </div>
       `;
@@ -2785,17 +2785,6 @@
           } catch(err){
             toast('No se pudo subir la foto. Inténtalo de nuevo.');
             label.textContent = textoOriginal;
-          }
-        });
-      }
-      const btnCopiar = card.querySelector('.lead-simulacion-btn-copiar');
-      if(btnCopiar){
-        btnCopiar.addEventListener('click', async ()=>{
-          try{
-            await navigator.clipboard.writeText(btnCopiar.dataset.enlace);
-            toast('Enlace copiado.');
-          } catch(err){
-            toast('No se pudo copiar. Copia el enlace manualmente.');
           }
         });
       }
