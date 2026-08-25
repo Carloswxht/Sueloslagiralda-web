@@ -176,18 +176,25 @@
   .sim-exito p{ color:var(--walnut-soft); margin-bottom:6px; }
 
   /* ---------- ENLACES DE SEGUIMIENTO ---------- */
+  .sim-exito-avance{
+    font-family:'Fraunces', serif; font-weight:600; font-size:1.05rem;
+    text-align:center; margin:26px auto 14px; max-width:560px;
+  }
   .sim-links{
-    max-width:560px; margin:28px auto 0; display:grid; gap:12px;
+    max-width:560px; margin:0 auto 0; display:grid; gap:12px;
   }
   .sim-link-card{
-    display:flex; align-items:center; justify-content:space-between; gap:14px;
-    background:var(--card); border:1px solid var(--line); border-radius:6px;
-    padding:16px 18px; text-decoration:none; transition:border-color .2s ease, transform .15s ease;
+    display:block; background:var(--card); border:1px solid var(--line); border-radius:6px;
+    padding:18px 20px; text-decoration:none; transition:border-color .2s ease, transform .15s ease;
   }
   .sim-link-card:hover{ border-color:var(--ocre); transform:translateY(-1px); }
-  .sim-link-card-texto b{ display:block; font-size:0.96rem; margin-bottom:2px; }
-  .sim-link-card-texto span{ font-size:0.8rem; color:var(--walnut-soft); }
-  .sim-link-card-flecha{ font-size:1.2rem; color:var(--ocre); flex-shrink:0; }
+  .sim-link-card-pregunta{ display:block; font-family:'Fraunces',serif; font-size:1rem; margin-bottom:5px; color:var(--walnut); }
+  .sim-link-card-sub{ display:block; font-size:0.84rem; color:var(--walnut-soft); margin-bottom:14px; }
+  .sim-link-card-btn{
+    display:inline-flex; align-items:center; gap:7px;
+    font-weight:700; font-size:0.88rem; color:var(--oak-deep);
+  }
+  .sim-link-card-btn::after{ content:"→"; color:var(--ocre); }
 
   .sim-section-espacio{ padding-bottom:64px; }
 
@@ -247,29 +254,7 @@
       <!-- El contenido de cada paso se genera con JS -->
     </div>
 
-    <div class="sim-links">
-      <a href="index.html#asesor" class="sim-link-card">
-        <div class="sim-link-card-texto">
-          <b>Asesor de Suelo</b>
-          <span>¿No sabes qué material te conviene? Responde 5 preguntas rápidas.</span>
-        </div>
-        <span class="sim-link-card-flecha">→</span>
-      </a>
-      <a href="index.html#presupuesto" class="sim-link-card">
-        <div class="sim-link-card-texto">
-          <b>Presupuesto personalizado</b>
-          <span>Calcula el precio con tus medidas exactas.</span>
-        </div>
-        <span class="sim-link-card-flecha">→</span>
-      </a>
-      <a href="index.html#contacto" class="sim-link-card">
-        <div class="sim-link-card-texto">
-          <b>Visita técnica gratuita</b>
-          <span>Que alguien de nuestro equipo vaya a medir y resolver dudas en persona.</span>
-        </div>
-        <span class="sim-link-card-flecha">→</span>
-      </a>
-    </div>
+    <div class="sim-links" id="simLinks"></div>
 
   </div>
 </section>
@@ -415,7 +400,7 @@
       </div>
       <div class="sim-group">
         <label>Tu nombre</label>
-        <input type="text" id="simNombre" placeholder="Nombre y apellido" value="${escapeHtml(simNombreValor)}">
+        <input type="text" id="simNombre" placeholder="Nombre" value="${escapeHtml(simNombreValor)}">
       </div>
       <div class="sim-group">
         <label>WhatsApp donde te enviamos la simulación</label>
@@ -449,11 +434,28 @@
     const card = document.getElementById('simCard');
     card.innerHTML = `
       <div class="sim-exito">
-        <div class="sim-exito-icon">✅</div>
-        <h3>¡Listo, recibimos tu fotografía!</h3>
-        <p>Nuestro equipo digital hará la simulación de tu piso.</p>
-        <p>En breve te la enviaremos por WhatsApp.</p>
+        <div class="sim-exito-icon">🏡</div>
+        <h3>¡Recibido!</h3>
+        <p>En menos de 24h te enviamos por WhatsApp el enlace con la simulación de tu suelo, lista para ver.</p>
       </div>
+    `;
+    document.getElementById('simLinks').innerHTML = `
+      <div class="sim-exito-avance">Mientras tanto, ¿seguimos avanzando?</div>
+      <a href="index.html#asesor" class="sim-link-card">
+        <span class="sim-link-card-pregunta">¿Aún tienes dudas de qué suelo elegir?</span>
+        <span class="sim-link-card-sub">Resuélvelo en 1 minuto con nuestro Asesor de Suelo gratuito.</span>
+        <span class="sim-link-card-btn">Descubrir mi suelo ideal</span>
+      </a>
+      <a href="index.html#presupuesto" class="sim-link-card">
+        <span class="sim-link-card-pregunta">¿Quieres saber cuánto te costaría?</span>
+        <span class="sim-link-card-sub">Calcula el precio con tus medidas exactas, sin esperar a la simulación.</span>
+        <span class="sim-link-card-btn">Ver mi presupuesto</span>
+      </a>
+      <a href="index.html#contacto" class="sim-link-card">
+        <span class="sim-link-card-pregunta">¿Prefieres que alguien te lo cuente en persona?</span>
+        <span class="sim-link-card-sub">Visita técnica gratuita, sin compromiso.</span>
+        <span class="sim-link-card-btn">Pedir mi visita gratis</span>
+      </a>
     `;
   }
 
