@@ -55,13 +55,13 @@
   .compare .before{ z-index:2; clip-path: inset(0 50% 0 0); }
   .compare .divider{
     position:absolute; top:0; bottom:0; left:50%; width:3px; background:var(--stone-light);
-    box-shadow:0 0 0 1px rgba(0,0,0,0.2);
+    box-shadow:0 0 0 1px rgba(0,0,0,0.2); z-index:3;
   }
   .compare .handle{
     position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     width:38px; height:38px; border-radius:50%; background:var(--stone-light);
     display:flex; align-items:center; justify-content:center;
-    font-size:0.85rem; box-shadow:var(--shadow);
+    font-size:0.85rem; box-shadow:var(--shadow); z-index:4;
   }
   .compare-label{
     position:absolute; bottom:12px; font-family:'IBM Plex Mono',monospace; font-size:0.68rem;
