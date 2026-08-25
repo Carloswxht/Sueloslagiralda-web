@@ -136,10 +136,21 @@
   }
   .sim-group input:focus{ outline:none; border-color:var(--ocre); }
 
+  .sim-consentimiento{
+    display:flex; align-items:flex-start; gap:10px; margin:4px 0 16px; cursor:pointer;
+    font-size:0.82rem; color:var(--walnut-soft); line-height:1.4;
+  }
+  .sim-consentimiento input{ margin-top:2px; width:16px; height:16px; flex-shrink:0; accent-color:var(--ocre); }
+
   .sim-btn-enviar{
     width:100%; justify-content:center; border:none; margin-top:6px;
   }
   .sim-status{ font-size:0.84rem; text-align:center; min-height:20px; margin-top:12px; }
+  .sim-consentimiento{
+    display:flex; align-items:flex-start; gap:10px; margin:16px 0 4px;
+    font-size:0.82rem; color:var(--walnut-soft); line-height:1.4; cursor:pointer;
+  }
+  .sim-consentimiento input{ width:18px; height:18px; flex-shrink:0; margin-top:1px; accent-color:var(--ocre); }
   .sim-status-ok{ color:var(--azulejo); font-weight:600; }
   .sim-status-error{ color:#B3401F; font-weight:600; }
   .sim-back{
@@ -319,6 +330,7 @@
   let simPlazo = null;
   let simNombreValor = '';
   let simTelefonoValor = '';
+  let simConsentimientoValor = false;
 
   function escapeHtml(texto){
     if(texto == null) return '';
@@ -414,6 +426,14 @@
         <label>WhatsApp donde te enviamos la simulación</label>
         <input type="tel" id="simTelefono" placeholder="600 000 000" value="${escapeHtml(simTelefonoValor)}">
       </div>
+      <label class="sim-consentimiento">
+        <input type="checkbox" id="simConsentimiento" ${simConsentimientoValor ? 'checked' : ''}>
+        <span>Acepto que Suelos La Giralda use esta foto para generar mi simulación personalizada.</span>
+      </label>
+      <label class="sim-consentimiento">
+        <input type="checkbox" id="simConsentimiento">
+        <span>Acepto que Suelos La Giralda use esta foto para generar mi simulación personalizada.</span>
+      </label>
       <button type="button" class="btn btn-primary sim-btn-enviar" id="simEnviar">Enviar</button>
       <p class="sim-status" id="simStatus"></p>
       <button type="button" class="sim-back" id="simVolverTiempo">← Volver</button>
@@ -423,6 +443,13 @@
     document.getElementById('simEnviar').addEventListener('click', ()=>{
       simNombreValor = document.getElementById('simNombre').value.trim();
       simTelefonoValor = document.getElementById('simTelefono').value.trim();
+      simConsentimientoValor = document.getElementById('simConsentimiento').checked;
+      const statusEl = document.getElementById('simStatus');
+      if(!simConsentimientoValor){
+        statusEl.textContent = 'Marca la casilla de autorización para poder enviarla.';
+        statusEl.className = 'sim-status sim-status-error';
+        return;
+      }
       enviarSimulacion();
     });
   }
@@ -449,6 +476,12 @@
 
     if(!telefono){
       statusEl.textContent = 'Por favor, indica tu WhatsApp.';
+      statusEl.className = 'sim-status sim-status-error';
+      return;
+    }
+    const consentimientoEl = document.getElementById('simConsentimiento');
+    if(!consentimientoEl.checked){
+      statusEl.textContent = 'Marca la casilla para poder enviar tu foto.';
       statusEl.className = 'sim-status sim-status-error';
       return;
     }
@@ -492,7 +525,9 @@
           nombre: nombre || '(no indicado)',
           telefono: telefono,
           foto_url: simFotoUrlSubida,
-          plazo: simPlazo || '(no indicado)'
+          plazo: simPlazo || '(no indicado)',
+          consiente_uso_foto: true,
+          consentimiento_fecha: new Date().toISOString()
         })
       });
       if(!resLead.ok) throw new Error('lead');
