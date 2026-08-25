@@ -51,7 +51,8 @@
     border-radius:6px; box-shadow:var(--shadow); background:var(--card);
   }
   .compare .before, .compare .after{ position:absolute; inset:0; background-size:cover; background-position:center; }
-  .compare .after{ clip-path: inset(0 50% 0 0); }
+  .compare .after{ z-index:1; }
+  .compare .before{ z-index:2; clip-path: inset(0 50% 0 0); }
   .compare .divider{
     position:absolute; top:0; bottom:0; left:50%; width:3px; background:var(--stone-light);
     box-shadow:0 0 0 1px rgba(0,0,0,0.2);
@@ -159,7 +160,7 @@
   }
 
   function iniciarComparador(el){
-    const after = el.querySelector('.after');
+    const before = el.querySelector('.before');
     const divider = el.querySelector('.divider');
     const handle = el.querySelector('.handle');
     let dragging = false;
@@ -167,7 +168,7 @@
       const rect = el.getBoundingClientRect();
       let pct = ((clientX - rect.left) / rect.width) * 100;
       pct = Math.max(4, Math.min(96, pct));
-      after.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+      before.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
       divider.style.left = pct + '%';
       handle.style.left = pct + '%';
     }
