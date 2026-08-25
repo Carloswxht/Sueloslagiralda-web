@@ -542,6 +542,27 @@
   .lead-foto-thumb-label{ font-family:'Work Sans',sans-serif; font-size:0.84rem; font-weight:600; color:var(--walnut); }
   .lead-tag.simulador{ background:#E4D9C4; color:var(--oak-deep); }
 
+  .lead-simulacion{ margin:0 15px 12px; }
+  .lead-simulacion-subir-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:11px; border-radius:10px; border:1px dashed var(--ocre);
+    background:rgba(192,147,46,0.08); color:var(--oak-deep);
+    font-family:'Work Sans',sans-serif; font-size:0.84rem; font-weight:600;
+    cursor:pointer; text-align:center;
+  }
+  .lead-simulacion-input{ display:none; }
+  .lead-simulacion-lista{ display:flex; gap:10px; align-items:flex-start; }
+  .lead-simulacion-lista .lead-foto-thumb{ width:64px; height:64px; }
+  .lead-simulacion-acciones{ display:flex; flex-direction:column; gap:6px; flex:1; }
+  .lead-simulacion-btn{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:9px 10px; border-radius:8px; border:1px solid var(--line);
+    font-family:'Work Sans',sans-serif; font-size:0.8rem; font-weight:600;
+    cursor:pointer; text-decoration:none;
+  }
+  .lead-simulacion-btn-wa{ background:var(--azulejo); color:#fff; border-color:var(--azulejo); }
+  .lead-simulacion-btn-copiar{ background:var(--stone-light); color:var(--walnut); }
+
   /* ---------- PROYECTOS ---------- */
   .pd-link{
     display:inline-flex; align-items:center; gap:6px; margin:0 18px 16px; padding:11px 15px;
@@ -2326,6 +2347,53 @@
     }[estado] || 'nuevo';
   }
 
+  function renderBloqueSimulacion(l){
+    const idLead = l.id;
+    if(l.foto_resultado_url && l.resultado_token){
+      const enlace = location.origin + '/resultado.html?id=' + l.resultado_token;
+      const telefono = (l.telefono || '').replace(/\D/g, '');
+      const mensaje = encodeURIComponent(`Hola${l.nombre && l.nombre !== '(no indicado)' ? ' ' + l.nombre : ''}, aquí tienes la simulación de tu suelo: ${enlace}`);
+      return `
+        <div class="lead-simulacion lead-simulacion-lista">
+          <img src="${escapeHtml(l.foto_resultado_url)}" alt="Foto simulada" class="lead-foto-thumb">
+          <div class="lead-simulacion-acciones">
+            <a href="https://wa.me/${telefono}?text=${mensaje}" target="_blank" class="lead-simulacion-btn lead-simulacion-btn-wa">💬 Enviar por WhatsApp</a>
+            <button type="button" class="lead-simulacion-btn lead-simulacion-btn-copiar" data-enlace="${escapeHtml(enlace)}">🔗 Copiar enlace</button>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="lead-simulacion">
+        <label class="lead-simulacion-subir-btn">
+          📤 Subir foto simulada
+          <input type="file" accept="image/*" class="lead-simulacion-input" data-lead-id="${idLead}">
+        </label>
+      </div>
+    `;
+  }
+
+  async function subirFotoSimulada(leadId, archivo){
+    const extension = (archivo.name.split('.').pop() || 'jpg').toLowerCase();
+    const token = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/-/g, '');
+    const nombreArchivo = `simulador-resultado/${token}.${extension}`;
+
+    const resUpload = await fetch(`${SUPABASE_URL}/storage/v1/object/fotos-obra/${nombreArchivo}`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': archivo.type || 'image/jpeg' },
+      body: archivo
+    });
+    if(!resUpload.ok) throw new Error('No se pudo subir la foto.');
+    const fotoResultadoUrl = `${SUPABASE_URL}/storage/v1/object/public/fotos-obra/${nombreArchivo}`;
+
+    const resUpdate = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ foto_resultado_url: fotoResultadoUrl, resultado_token: token })
+    });
+    if(!resUpdate.ok) throw new Error('No se pudo guardar el enlace.');
+  }
+
   function abrirLeadFotoVisor(url){
     document.getElementById('leadFotoImg').src = url;
     document.getElementById('leadFotoOverlay').classList.add('open');
@@ -2540,6 +2608,8 @@
             </button>
           ` : ''}
 
+          ${esSimulador ? renderBloqueSimulacion(l) : ''}
+
           <div class="lead-respuestas">${respuestasHtml}</div>
 
           <div class="lead-detail">
@@ -2565,6 +2635,36 @@
       const fotoBtn = card.querySelector('.lead-foto-thumb-btn');
       if(fotoBtn){
         fotoBtn.addEventListener('click', ()=> abrirLeadFotoVisor(fotoBtn.dataset.foto));
+      }
+      const inputSimulacion = card.querySelector('.lead-simulacion-input');
+      if(inputSimulacion){
+        inputSimulacion.addEventListener('change', async ()=>{
+          const archivo = inputSimulacion.files[0];
+          if(!archivo) return;
+          const leadId = inputSimulacion.dataset.leadId;
+          const label = inputSimulacion.closest('.lead-simulacion-subir-btn');
+          const textoOriginal = label.textContent;
+          label.textContent = 'Subiendo…';
+          try{
+            await subirFotoSimulada(leadId, archivo);
+            toast('Foto simulada guardada. Ya puedes enviar el enlace.');
+            cargarLeads();
+          } catch(err){
+            toast('No se pudo subir la foto. Inténtalo de nuevo.');
+            label.textContent = textoOriginal;
+          }
+        });
+      }
+      const btnCopiar = card.querySelector('.lead-simulacion-btn-copiar');
+      if(btnCopiar){
+        btnCopiar.addEventListener('click', async ()=>{
+          try{
+            await navigator.clipboard.writeText(btnCopiar.dataset.enlace);
+            toast('Enlace copiado.');
+          } catch(err){
+            toast('No se pudo copiar. Copia el enlace manualmente.');
+          }
+        });
       }
       const badge = card.querySelector('.proy-badge-click');
       const estadoMenu = card.querySelector('.proy-estado-menu');

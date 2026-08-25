@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Tu simulación — Suelos La Giralda</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --stone: #E7E0D2;
+    --stone-light: #F4EFE4;
+    --card: #FBF8F1;
+    --walnut: #2A2118;
+    --walnut-soft: #453626;
+    --oak: #8B5E34;
+    --oak-deep: #6E4626;
+    --azulejo: #33544D;
+    --ocre: #C0932E;
+    --line: rgba(42,33,24,0.14);
+    --shadow: 0 12px 30px rgba(42,33,24,0.10);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{
+    background:var(--stone); color:var(--walnut);
+    font-family:'Work Sans', sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{ font-family:'Fraunces', serif; font-weight:600; letter-spacing:-0.01em; color:var(--walnut); }
+  a{color:inherit;}
+  img{max-width:100%; display:block;}
+  .wrap{max-width:640px; margin:0 auto; padding:0 24px;}
+
+  header{ background:rgba(42,33,24,0.94); padding:16px 0; }
+  .brand{
+    font-family:'Fraunces', serif; font-weight:600; font-size:1.2rem; text-align:center;
+  }
+  .brand .word-cream{ color:var(--stone-light); }
+  .brand .word-oak{ color:var(--ocre); }
+
+  .res-hero{ text-align:center; padding:40px 0 8px; }
+  .res-saludo{ font-size:1.02rem; color:var(--walnut-soft); margin-bottom:4px; }
+  .res-titulo{ font-size:clamp(1.5rem, 4vw, 2rem); line-height:1.25; margin-bottom:6px; }
+  .res-titulo em{ font-style:italic; color:var(--oak-deep); }
+  .res-hint{ font-size:0.84rem; color:var(--walnut-soft); margin-bottom:24px; }
+
+  /* ---------- Comparador antes/después (mismo mecanismo que el index) ---------- */
+  .compare{
+    position:relative; aspect-ratio:4/3; overflow:hidden; cursor:ew-resize;
+    border-radius:6px; box-shadow:var(--shadow); background:var(--card);
+  }
+  .compare .before, .compare .after{ position:absolute; inset:0; background-size:cover; background-position:center; }
+  .compare .after{ clip-path: inset(0 50% 0 0); }
+  .compare .divider{
+    position:absolute; top:0; bottom:0; left:50%; width:3px; background:var(--stone-light);
+    box-shadow:0 0 0 1px rgba(0,0,0,0.2);
+  }
+  .compare .handle{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:38px; height:38px; border-radius:50%; background:var(--stone-light);
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.85rem; box-shadow:var(--shadow);
+  }
+  .compare-label{
+    position:absolute; bottom:12px; font-family:'IBM Plex Mono',monospace; font-size:0.68rem;
+    padding:4px 9px; background:rgba(42,33,24,0.75); color:#fff; border-radius:2px;
+  }
+  .compare-label.l{left:12px;} .compare-label.r{right:12px;}
+  .res-arrastra{ text-align:center; font-size:0.78rem; color:var(--walnut-soft); margin-top:10px; }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:13px 24px; border-radius:2px;
+    font-weight:600; font-size:0.94rem; text-decoration:none; border:none; cursor:pointer;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .btn-wa{ background:var(--azulejo); color:#fff; }
+  .btn-wa:hover{ background:#284440; transform:translateY(-1px); }
+  .res-cta{ text-align:center; margin:26px 0 8px; }
+
+  /* ---------- Bloque "seguimos avanzando" (idéntico al simulador) ---------- */
+  .sim-avance-eyebrow{
+    display:flex; align-items:center; gap:10px;
+    font-family:'IBM Plex Mono', monospace; font-size:0.74rem;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--azulejo); margin:36px 0 12px;
+  }
+  .sim-avance-eyebrow::after{ content:""; flex:1; height:1px; background:var(--line); }
+  .sim-avance-bloque{
+    background:var(--card); border:1px solid var(--line); border-radius:6px; box-shadow:var(--shadow); overflow:hidden;
+  }
+  .sim-avance-fila{
+    position:relative; display:flex; align-items:center; justify-content:space-between;
+    gap:16px; padding:20px 22px; text-decoration:none;
+    border-top:1px solid var(--line); transition:background .15s ease, padding-left .15s ease;
+  }
+  .sim-avance-fila:first-child{ border-top:none; }
+  .sim-avance-fila:hover, .sim-avance-fila:active{ background:rgba(201,162,39,0.06); padding-left:28px; }
+  .sim-avance-texto{ flex:1; min-width:0; }
+  .sim-avance-pregunta{
+    display:block; font-family:'Fraunces',serif; font-style:italic; font-weight:500;
+    font-size:1.02rem; color:var(--oak-deep); margin-bottom:4px;
+  }
+  .sim-avance-sub{ display:block; font-size:0.83rem; color:var(--walnut-soft); line-height:1.45; }
+  .sim-avance-flecha{
+    flex-shrink:0; width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); color:var(--oak-deep); font-size:1rem;
+    transition:background .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .sim-avance-fila:hover .sim-avance-flecha{ background:var(--oak-deep); border-color:var(--oak-deep); color:var(--stone-light); transform:translateX(3px); }
+  .sim-avance-fila.sim-avance-principal{ border-left:3px solid var(--ocre); padding-left:19px; }
+  .sim-avance-fila.sim-avance-principal:hover{ padding-left:27px; }
+
+  .res-estado{ text-align:center; padding:80px 24px; color:var(--walnut-soft); }
+  .res-estado h2{ margin-bottom:10px; }
+
+  footer{ background:var(--walnut); color:#CFC5B5; padding:36px 0 26px; margin-top:56px; text-align:center; }
+  .footer-brand{font-family:'Fraunces',serif; color:var(--stone-light); font-size:1.15rem; margin-bottom:18px;}
+  .footer-brand-giralda{ color:var(--ocre); }
+  .footer-bottom{
+    border-top:1px solid #453626; padding-top:18px; font-size:0.78rem; color:#8B8071;
+  }
+
+  .sim-section-espacio{ padding-bottom:64px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="word-cream">Suelos</span> <span class="word-oak">La Giralda</span>
+  </div>
+</header>
+
+<main id="resContenido">
+  <div class="res-estado">
+    <h2>Cargando tu simulación…</h2>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-brand">Suelos <span class="footer-brand-giralda">La Giralda</span></div>
+    <div class="footer-bottom">© 2026 Suelos La Giralda · Autónomo dado de alta · Seguro de responsabilidad civil</div>
+  </div>
+</footer>
+
+<script>
+  const SUPABASE_URL = 'https://abrumjkwcwsftdgcruvr.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_IS8ZPhOtH1F4HemveDU3bg_8JOc8j8F';
+
+  function escapeHtml(texto){
+    if(texto == null) return '';
+    return String(texto)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function iniciarComparador(el){
+    const after = el.querySelector('.after');
+    const divider = el.querySelector('.divider');
+    const handle = el.querySelector('.handle');
+    let dragging = false;
+    function setPos(clientX){
+      const rect = el.getBoundingClientRect();
+      let pct = ((clientX - rect.left) / rect.width) * 100;
+      pct = Math.max(4, Math.min(96, pct));
+      after.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+      divider.style.left = pct + '%';
+      handle.style.left = pct + '%';
+    }
+    el.addEventListener('mousedown', e=>{ dragging=true; setPos(e.clientX); });
+    window.addEventListener('mousemove', e=>{ if(dragging) setPos(e.clientX); });
+    window.addEventListener('mouseup', ()=> dragging=false);
+    el.addEventListener('touchstart', e=> setPos(e.touches[0].clientX));
+    el.addEventListener('touchmove', e=> setPos(e.touches[0].clientX));
+  }
+
+  function renderNoEncontrado(){
+    document.getElementById('resContenido').innerHTML = `
+      <div class="res-estado">
+        <h2>No encontramos esta simulación</h2>
+        <p>Puede que el enlace esté incompleto. Escríbenos por WhatsApp y te ayudamos.</p>
+      </div>
+    `;
+  }
+
+  async function cargarResultado(){
+    const params = new URLSearchParams(location.search);
+    const token = params.get('id');
+    if(!token){ renderNoEncontrado(); return; }
+
+    try{
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/leads?resultado_token=eq.${encodeURIComponent(token)}&select=nombre,telefono,foto_url,foto_resultado_url&limit=1`,
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+      );
+      const filas = res.ok ? await res.json() : [];
+      const lead = filas[0];
+
+      if(!lead || !lead.foto_resultado_url){ renderNoEncontrado(); return; }
+
+      const nombre = lead.nombre && lead.nombre !== '(no indicado)' ? lead.nombre : '';
+      const telefono = (lead.telefono || '').replace(/\D/g, '');
+      const mensajeWa = encodeURIComponent(`Hola, vi mi simulación y me gustaría avanzar con el cambio de suelo.`);
+
+      document.getElementById('resContenido').innerHTML = `
+        <div class="wrap">
+          <div class="res-hero">
+            ${nombre ? `<p class="res-saludo">Hola ${escapeHtml(nombre)},</p>` : ''}
+            <h1 class="res-titulo">Así quedaría tu <em>suelo nuevo</em></h1>
+            <p class="res-hint">Arrastra para comparar antes y después.</p>
+          </div>
+
+          <div class="compare" data-compare>
+            <div class="before" style="background-image:url('${escapeHtml(lead.foto_url)}')"></div>
+            <div class="after" style="background-image:url('${escapeHtml(lead.foto_resultado_url)}')"></div>
+            <div class="divider"></div>
+            <div class="handle">⇔</div>
+            <div class="compare-label l">Antes</div>
+            <div class="compare-label r">Después</div>
+          </div>
+          <p class="res-arrastra">👆 Desliza la línea para ver el cambio</p>
+
+          <div class="res-cta">
+            <a href="https://wa.me/34605288673?text=${mensajeWa}" class="btn btn-wa">💬 Hablar con Suelos La Giralda</a>
+          </div>
+
+          <div class="sim-avance-eyebrow">¿Seguimos avanzando?</div>
+          <div class="sim-avance-bloque">
+            <a href="index.html#asesor" class="sim-avance-fila sim-avance-principal">
+              <div class="sim-avance-texto">
+                <span class="sim-avance-pregunta">¿Aún tienes dudas de qué suelo elegir?</span>
+                <span class="sim-avance-sub">Resuélvelo en 1 minuto con nuestro Asesor de Suelo en línea, totalmente gratuito.</span>
+              </div>
+              <span class="sim-avance-flecha">→</span>
+            </a>
+            <a href="index.html#presupuesto" class="sim-avance-fila">
+              <div class="sim-avance-texto">
+                <span class="sim-avance-pregunta">¿Quieres saber cuánto te costaría?</span>
+                <span class="sim-avance-sub">Calcula el precio con tus medidas exactas.</span>
+              </div>
+              <span class="sim-avance-flecha">→</span>
+            </a>
+            <a href="index.html#contacto" class="sim-avance-fila">
+              <div class="sim-avance-texto">
+                <span class="sim-avance-pregunta">¿Prefieres que alguien te lo cuente en persona?</span>
+                <span class="sim-avance-sub">Visita técnica gratuita, sin compromiso.</span>
+              </div>
+              <span class="sim-avance-flecha">→</span>
+            </a>
+          </div>
+        </div>
+        <div class="sim-section-espacio"></div>
+      `;
+      iniciarComparador(document.querySelector('[data-compare]'));
+    } catch(err){
+      renderNoEncontrado();
+    }
+  }
+
+  cargarResultado();
+</script>
+
+</body>
+</html>
