@@ -18,8 +18,6 @@
     --azulejo: #33544D;
     --azulejo-light: #4E766D;
     --ocre: #C0932E;
-    --dorado: #C9A227;
-    --terracota: #B0603C;
     --line: rgba(42,33,24,0.14);
     --shadow: 0 12px 30px rgba(42,33,24,0.10);
   }
@@ -177,52 +175,46 @@
   .sim-exito h3{ font-size:1.3rem; margin-bottom:10px; }
   .sim-exito p{ color:var(--walnut-soft); margin-bottom:6px; }
 
-  /* ---------- ENLACES DE SEGUIMIENTO ---------- */
-  .sim-exito-avance{
-    font-family:'Fraunces', serif; font-weight:600; font-size:1.1rem;
-    text-align:center; margin:30px auto 18px; max-width:560px; color:var(--walnut);
+  /* ---------- SEGUIMIENTO: un solo bloque, tres caminos ---------- */
+  .sim-avance-eyebrow{
+    display:flex; align-items:center; gap:10px;
+    font-family:'IBM Plex Mono', monospace; font-size:0.74rem;
+    letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--azulejo); margin:34px auto 12px; max-width:560px;
   }
-  .sim-links{
-    max-width:560px; margin:0 auto 0; display:grid; gap:16px;
+  .sim-avance-eyebrow::after{ content:""; flex:1; height:1px; background:var(--line); }
+  .sim-avance-bloque{
+    max-width:560px; margin:0 auto; background:var(--card); border:1px solid var(--line);
+    border-radius:6px; box-shadow:var(--shadow); overflow:hidden;
   }
-  .sim-link-card{
-    position:relative; display:block; background:var(--card); border:1px solid var(--line);
-    border-radius:8px; padding:26px 22px 22px; text-decoration:none; text-align:center;
-    box-shadow:0 6px 18px rgba(42,33,24,0.06);
-    transition:border-color .2s ease, transform .15s ease, box-shadow .2s ease;
+  .sim-avance-fila{
+    position:relative; display:flex; align-items:center; justify-content:space-between;
+    gap:16px; padding:20px 22px; text-decoration:none;
+    border-top:1px solid var(--line); transition:background .15s ease, padding-left .15s ease;
   }
-  .sim-link-card:hover, .sim-link-card:active, .sim-link-card:focus-visible{
-    border-color:var(--dorado);
-    box-shadow:0 10px 26px rgba(201,162,39,0.24);
-    transform:translateY(-2px);
+  .sim-avance-fila:first-child{ border-top:none; }
+  .sim-avance-fila:hover, .sim-avance-fila:active, .sim-avance-fila:focus-visible{
+    background:rgba(201,162,39,0.06); padding-left:28px;
   }
-  .sim-link-card-etiqueta{
-    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:0.64rem;
-    letter-spacing:0.08em; text-transform:uppercase; color:var(--dorado);
-    background:rgba(201,162,39,0.13); padding:4px 10px; border-radius:2px; margin-bottom:14px;
-  }
-  .sim-link-card-icono{
-    width:50px; height:50px; margin:0 auto 14px;
-    display:flex; align-items:center; justify-content:center;
-    border-radius:50%; font-size:1.5rem; background:var(--card-icono, var(--stone));
-  }
-  .sim-link-card-pregunta{
+  .sim-avance-texto{ flex:1; min-width:0; }
+  .sim-avance-pregunta{
     display:block; font-family:'Fraunces',serif; font-style:italic; font-weight:500;
-    font-size:1.06rem; margin-bottom:6px; color:var(--oak-deep);
+    font-size:1.02rem; color:var(--oak-deep); margin-bottom:4px;
   }
-  .sim-link-card-sub{ display:block; font-size:0.85rem; color:var(--walnut-soft); margin-bottom:18px; line-height:1.5; }
-  .sim-link-card-btn{
-    display:inline-flex; align-items:center; gap:7px;
-    padding:11px 22px; border-radius:2px;
-    font-weight:600; font-size:0.86rem; color:var(--stone-light);
-    background:var(--terracota);
+  .sim-avance-sub{ display:block; font-size:0.83rem; color:var(--walnut-soft); line-height:1.45; }
+  .sim-avance-flecha{
+    flex-shrink:0; width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); color:var(--oak-deep); font-size:1rem;
+    transition:background .15s ease, border-color .15s ease, transform .15s ease;
   }
-  .sim-link-card.sim-link-principal{
-    background:linear-gradient(165deg, rgba(201,162,39,0.09), var(--card) 55%);
-    border-color:rgba(201,162,39,0.45);
+  .sim-avance-fila:hover .sim-avance-flecha, .sim-avance-fila:active .sim-avance-flecha{
+    background:var(--oak-deep); border-color:var(--oak-deep); color:var(--stone-light); transform:translateX(3px);
   }
-  .sim-link-card.sim-link-principal .sim-link-card-icono{ background:rgba(201,162,39,0.18); }
-  .sim-link-card.sim-link-principal .sim-link-card-btn{ background:var(--dorado); color:var(--walnut); }
+  .sim-avance-fila.sim-avance-principal{
+    border-left:3px solid var(--ocre); padding-left:19px;
+  }
+  .sim-avance-fila.sim-avance-principal:hover, .sim-avance-fila.sim-avance-principal:active{ padding-left:27px; }
 
   .sim-section-espacio{ padding-bottom:64px; }
 
@@ -269,7 +261,7 @@
       <!-- El contenido de cada paso se genera con JS -->
     </div>
 
-    <div class="sim-links" id="simLinks"></div>
+    <div id="simLinks"></div>
 
   </div>
 </section>
@@ -426,26 +418,30 @@
       </div>
     `;
     document.getElementById('simLinks').innerHTML = `
-      <div class="sim-exito-avance">Mientras tanto, ¿seguimos avanzando?</div>
-      <a href="index.html#asesor" class="sim-link-card sim-link-principal">
-        <span class="sim-link-card-etiqueta">Lo más elegido</span>
-        <span class="sim-link-card-icono">🧭</span>
-        <span class="sim-link-card-pregunta">¿Aún tienes dudas de qué suelo elegir?</span>
-        <span class="sim-link-card-sub">Resuélvelo en 1 minuto con nuestro Asesor de Suelo gratuito.</span>
-        <span class="sim-link-card-btn">Descubrir mi suelo ideal →</span>
-      </a>
-      <a href="index.html#presupuesto" class="sim-link-card">
-        <span class="sim-link-card-icono" style="background:rgba(176,96,60,0.14);">🧮</span>
-        <span class="sim-link-card-pregunta">¿Quieres saber cuánto te costaría?</span>
-        <span class="sim-link-card-sub">Calcula el precio con tus medidas exactas, sin esperar a la simulación.</span>
-        <span class="sim-link-card-btn">Ver mi presupuesto →</span>
-      </a>
-      <a href="index.html#contacto" class="sim-link-card">
-        <span class="sim-link-card-icono" style="background:rgba(51,84,77,0.13);">🏠</span>
-        <span class="sim-link-card-pregunta">¿Prefieres que alguien te lo cuente en persona?</span>
-        <span class="sim-link-card-sub">Visita técnica gratuita, sin compromiso.</span>
-        <span class="sim-link-card-btn">Pedir mi visita gratis →</span>
-      </a>
+      <div class="sim-avance-eyebrow">Mientras tanto</div>
+      <div class="sim-avance-bloque">
+        <a href="index.html#asesor" class="sim-avance-fila sim-avance-principal">
+          <div class="sim-avance-texto">
+            <span class="sim-avance-pregunta">¿Aún tienes dudas de qué suelo elegir?</span>
+            <span class="sim-avance-sub">Resuélvelo en 1 minuto con nuestro Asesor de Suelo gratuito.</span>
+          </div>
+          <span class="sim-avance-flecha">→</span>
+        </a>
+        <a href="index.html#presupuesto" class="sim-avance-fila">
+          <div class="sim-avance-texto">
+            <span class="sim-avance-pregunta">¿Quieres saber cuánto te costaría?</span>
+            <span class="sim-avance-sub">Calcula el precio con tus medidas exactas, sin esperar a la simulación.</span>
+          </div>
+          <span class="sim-avance-flecha">→</span>
+        </a>
+        <a href="index.html#contacto" class="sim-avance-fila">
+          <div class="sim-avance-texto">
+            <span class="sim-avance-pregunta">¿Prefieres que alguien te lo cuente en persona?</span>
+            <span class="sim-avance-sub">Visita técnica gratuita, sin compromiso.</span>
+          </div>
+          <span class="sim-avance-flecha">→</span>
+        </a>
+      </div>
     `;
   }
 
