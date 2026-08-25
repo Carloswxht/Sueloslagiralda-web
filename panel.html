@@ -339,6 +339,23 @@
     padding:20px 18px 28px; max-height:80vh; overflow-y:auto;
   }
   .foto-modal-box h3{ font-family:'Fraunces',serif; font-size:1rem; margin:0 0 12px; }
+  .historial-cliente-box{ position:relative; padding-top:44px; }
+  .foto-modal-cerrar-x{
+    position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:50%;
+    border:none; background:var(--stone-light); color:var(--walnut); font-size:0.9rem; cursor:pointer;
+  }
+  .historial-cliente-item{
+    display:flex; gap:10px; padding:12px 0; border-top:1px solid var(--line);
+  }
+  .historial-cliente-item:first-child{ border-top:none; }
+  .historial-cliente-icono{ font-size:1.1rem; flex-shrink:0; }
+  .historial-cliente-texto{ flex:1; min-width:0; }
+  .historial-cliente-concepto{ font-family:'Work Sans',sans-serif; font-size:0.88rem; color:var(--walnut); font-weight:600; }
+  .historial-cliente-meta{ font-family:'Work Sans',sans-serif; font-size:0.76rem; color:var(--walnut-soft); margin-top:2px; }
+  .historial-cliente-aviso{
+    padding:14px; border-radius:10px; background:var(--stone-light);
+    font-family:'Work Sans',sans-serif; font-size:0.84rem; color:var(--walnut-soft); margin-top:14px; text-align:center;
+  }
   .foto-proyecto-lista{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
   .foto-proyecto-btn{
     text-align:left; padding:12px 14px; border-radius:10px; border:1px solid var(--line);
@@ -546,6 +563,11 @@
     margin:0 15px 12px; padding:8px 10px; border-radius:8px;
     background:rgba(51,84,77,0.08); color:var(--azulejo);
     font-family:'Work Sans',sans-serif; font-size:0.78rem; line-height:1.4;
+  }
+  .lead-historial-btn{
+    margin:0 15px 10px; padding:8px 12px; border-radius:8px; border:1px solid var(--line);
+    background:none; color:var(--walnut-soft); font-family:'Work Sans',sans-serif;
+    font-size:0.78rem; font-weight:600; cursor:pointer;
   }
 
   .lead-simulacion{ margin:0 15px 12px; }
@@ -1282,6 +1304,7 @@
     <div class="presu-header">
       <h2 id="proyectoDetalleTitulo">Proyecto</h2>
       <p id="proyectoDetalleSubtitulo"></p>
+      <div id="proyectoDetalleHistorialWrap"></div>
     </div>
     <div id="proyectoDetalleContenido">
       <div class="loading">Cargando…</div>
@@ -1696,6 +1719,15 @@
   </div>
   <img id="leadFotoImg" src="" alt="Foto del suelo del cliente">
   <button type="button" class="lead-foto-descargar-btn" id="leadFotoDescargar">⬇️ Descargar foto</button>
+</div>
+
+<!-- ===================== HISTORIAL DEL CLIENTE ===================== -->
+<div class="foto-modal" id="historialClienteOverlay">
+  <div class="foto-modal-box historial-cliente-box">
+    <button class="foto-modal-cerrar-x" id="historialClienteCerrar" aria-label="Cerrar">✕</button>
+    <h3 id="historialClienteTitulo">Historial del cliente</h3>
+    <div id="historialClienteContenido"><div class="loading">Cargando…</div></div>
+  </div>
 </div>
 
 <!-- ===================== VISOR DE FOTO AMPLIADA ===================== -->
@@ -2503,10 +2535,10 @@
     return limpio;
   }
 
-  // Vincula cada lead con su cliente (por teléfono normalizado). Si el cliente
-  // no existe todavía, lo crea. Así los leads antiguos y los nuevos quedan
-  // conectados sin tener que tocar los formularios públicos.
-  async function vincularLeadsConClientes(listaLeads){
+  // Vincula cada fila (lead o proyecto) con su cliente (por teléfono normalizado).
+  // Si el cliente no existe todavía, lo crea. Así los registros antiguos y los
+  // nuevos quedan conectados sin tener que tocar los formularios públicos.
+  async function vincularConClientes(lista, tabla, obtenerTelefono, obtenerNombre){
     try{
       const resClientes = await fetch(SUPABASE_URL + '/rest/v1/clientes?select=*', {
         headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
@@ -2516,8 +2548,8 @@
       const porTelefono = {};
       clientes.forEach(c => { porTelefono[c.telefono_normalizado] = c; });
 
-      for(const l of listaLeads){
-        const tel = normalizarTelefono(l.telefono);
+      for(const item of lista){
+        const tel = normalizarTelefono(obtenerTelefono(item));
         if(!tel) continue;
         let cliente = porTelefono[tel];
         if(!cliente){
@@ -2525,7 +2557,7 @@
             const resCrear = await fetch(SUPABASE_URL + '/rest/v1/clientes', {
               method: 'POST',
               headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=representation' },
-              body: JSON.stringify({ telefono: l.telefono, telefono_normalizado: tel, nombre: l.nombre })
+              body: JSON.stringify({ telefono: obtenerTelefono(item), telefono_normalizado: tel, nombre: obtenerNombre(item) })
             });
             if(resCrear.ok){
               const filas = await resCrear.json();
@@ -2534,16 +2566,16 @@
             }
           } catch(err){ continue; }
         }
-        if(cliente && l.cliente_id !== cliente.id){
-          l.cliente_id = cliente.id;
-          fetch(SUPABASE_URL + '/rest/v1/leads?id=eq.' + l.id, {
+        if(cliente && item.cliente_id !== cliente.id){
+          item.cliente_id = cliente.id;
+          fetch(SUPABASE_URL + '/rest/v1/' + tabla + '?id=eq.' + item.id, {
             method: 'PATCH',
             headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
             body: JSON.stringify({ cliente_id: cliente.id })
           }).catch(()=>{});
         }
       }
-    } catch(err){ /* si falla, los leads igual se muestran, solo sin el cruce */ }
+    } catch(err){ /* si falla, los registros igual se muestran, solo sin el cruce */ }
   }
 
   async function cargarLeads(){
@@ -2560,7 +2592,7 @@
       await revisarLeadsVencidos(leads);
       leadsCargados = true;
       render();
-      vincularLeadsConClientes(leads).then(()=> render());
+      vincularConClientes(leads, 'leads', l=>l.telefono, l=>l.nombre).then(()=> render());
     } catch(err){
       listEl.innerHTML = '<div class="empty"><h3>No se pudo conectar</h3><p>Revisa tu conexión e intenta de nuevo con el botón de abajo.</p></div>';
     }
@@ -2692,6 +2724,10 @@
             </div>
           </div>
 
+          ${l.cliente_id ? `
+            <button type="button" class="lead-historial-btn" data-cliente-id="${l.cliente_id}" data-nombre="${escapeHtml(l.nombre)}">🕐 Historial</button>
+          ` : ''}
+
           ${tambienHizoHtml}
 
           ${l.foto_url ? `
@@ -2726,6 +2762,10 @@
 
     listEl.querySelectorAll('.lead-card').forEach(card=>{
       const fotoBtn = card.querySelector('.lead-foto-thumb-btn');
+      const historialBtn = card.querySelector('.lead-historial-btn');
+      if(historialBtn){
+        historialBtn.addEventListener('click', ()=> abrirHistorialCliente(historialBtn.dataset.clienteId, historialBtn.dataset.nombre));
+      }
       if(fotoBtn){
         fotoBtn.addEventListener('click', ()=> abrirLeadFotoVisor(fotoBtn.dataset.foto));
       }
@@ -4111,6 +4151,86 @@
 
   const HISTORIAL_ICONO = { creado: '🆕', edicion: '✏️', pdf_enviado: '📤', mensaje_enviado: '💬', cambio_estado: '🔀', nota: '🗒️', foto: '📷', ingreso: '💰', gasto: '🧾', gasto_borrado: '🗑️', foto_borrada: '🗑️', instalador_asignado: '👷' };
 
+  const HISTORIAL_ICONO_LEAD = { 'Presupuesto': '📋', 'Visita técnica': '🏠', 'Simulador': '📷', 'Manual': '✏️' };
+
+  async function abrirHistorialCliente(clienteId, nombreFallback){
+    const overlay = document.getElementById('historialClienteOverlay');
+    const contenido = document.getElementById('historialClienteContenido');
+    const titulo = document.getElementById('historialClienteTitulo');
+    titulo.textContent = 'Historial de ' + (nombreFallback || 'este cliente');
+    contenido.innerHTML = '<div class="loading">Cargando…</div>';
+    overlay.classList.add('active');
+
+    if(!clienteId){
+      contenido.innerHTML = '<p class="historial-cliente-aviso">Este cliente todavía no tiene teléfono registrado, así que no se puede armar su historial.</p>';
+      return;
+    }
+
+    try{
+      const [resLeads, resProyectos] = await Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/leads?cliente_id=eq.' + clienteId + '&select=*&order=created_at.desc', {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        }),
+        fetch(SUPABASE_URL + '/rest/v1/proyectos?cliente_id=eq.' + clienteId + '&select=*', {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        })
+      ]);
+      const leadsCliente = resLeads.ok ? await resLeads.json() : [];
+      const proyectosCliente = resProyectos.ok ? await resProyectos.json() : [];
+
+      const eventos = [];
+      leadsCliente.forEach(l=>{
+        eventos.push({
+          fecha: l.created_at,
+          icono: HISTORIAL_ICONO_LEAD[l.formulario] || '📝',
+          concepto: `Lead: ${l.formulario}`,
+          meta: formatearFecha(l.created_at)
+        });
+      });
+
+      const historialesProyectos = await Promise.all(
+        proyectosCliente.map(p => fetchHistorialDeProyecto(p.nombre).then(h => h.map(e => ({ ...e, proyecto: p.nombre }))))
+      );
+      historialesProyectos.flat().forEach(e=>{
+        eventos.push({
+          fecha: e.created_at,
+          icono: HISTORIAL_ICONO[e.tipo] || '•',
+          concepto: e.concepto,
+          meta: `${e.proyecto} · ${formatearFecha(e.created_at)}`
+        });
+      });
+
+      eventos.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+
+      let html = '';
+      if(eventos.length === 0){
+        html += '<p class="historial-cliente-aviso">Aún no hay actividad registrada con este cliente.</p>';
+      } else {
+        html += eventos.map(e => `
+          <div class="historial-cliente-item">
+            <span class="historial-cliente-icono">${e.icono}</span>
+            <div class="historial-cliente-texto">
+              <div class="historial-cliente-concepto">${escapeHtml(e.concepto)}</div>
+              <div class="historial-cliente-meta">${escapeHtml(e.meta)}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+      if(proyectosCliente.length === 0){
+        html += '<p class="historial-cliente-aviso">Este cliente aún no tiene ningún proyecto.</p>';
+      }
+      contenido.innerHTML = html;
+    } catch(err){
+      contenido.innerHTML = '<p class="historial-cliente-aviso">No se pudo cargar el historial. Revisa tu conexión.</p>';
+    }
+  }
+  document.getElementById('historialClienteCerrar').addEventListener('click', ()=>{
+    document.getElementById('historialClienteOverlay').classList.remove('active');
+  });
+  document.getElementById('historialClienteOverlay').addEventListener('click', (e)=>{
+    if(e.target.id === 'historialClienteOverlay') e.currentTarget.classList.remove('active');
+  });
+
   async function registrarHistorial(nombreProyecto, tipo, concepto){
     try{
       const resHist = await fetch(SUPABASE_URL + '/rest/v1/proyecto_historial', {
@@ -4377,6 +4497,8 @@
         ? todos.filter(p => Array.isArray(p.instaladores_ids) && p.instaladores_ids.includes(sesionActual && sesionActual.user.id))
         : todos;
 
+      vincularConClientes(todos, 'proyectos', p=>p.telefono_cliente, p=>p.cliente).then(()=> renderProyectosLista());
+
       try{
         const resEquipo = await fetchAutenticado('/rest/v1/usuarios_perfil?select=id,nombre&activo=eq.true&order=nombre.asc');
         equipoParaAsignarCache = resEquipo.ok ? await resEquipo.json() : [];
@@ -4462,6 +4584,7 @@
                 <button type="button" class="proy-camara-btn proy-msg-btn" aria-label="Enviar mensaje de WhatsApp al cliente">💬</button>
                 <button type="button" class="proy-camara-btn proy-pdf-btn" aria-label="Enviar PDF por WhatsApp">📄</button>
                 <button type="button" class="proy-camara-btn" data-nombre="${escapeHtml(p.nombre)}" aria-label="Ver fotos de este proyecto">📷</button>
+                ${p.cliente_id ? `<button type="button" class="proy-camara-btn proy-historial-btn" data-cliente-id="${p.cliente_id}" data-nombre="${escapeHtml(p.cliente || p.nombre)}" aria-label="Ver historial del cliente">🕐</button>` : ''}
                 <button type="button" class="proy-camara-btn proy-pendiente-btn" aria-label="Anotar pendiente de obra">
                   📝${pendientesPorProyectoCache[p.nombre] ? `<span class="proy-pendiente-count">${pendientesPorProyectoCache[p.nombre]}</span>` : ''}
                 </button>
@@ -4610,6 +4733,14 @@
         });
       }
 
+      const historialProyBtn = card.querySelector('.proy-historial-btn');
+      if(historialProyBtn){
+        historialProyBtn.addEventListener('click', (e)=>{
+          e.stopPropagation();
+          abrirHistorialCliente(historialProyBtn.dataset.clienteId, historialProyBtn.dataset.nombre);
+        });
+      }
+
       const pendienteBtn = card.querySelector('.proy-pendiente-btn');
       if(pendienteBtn){
         pendienteBtn.addEventListener('click', (e)=>{
@@ -4645,6 +4776,14 @@
     const instaladoresTexto = nombresInstaladores(proyecto.instaladores_ids) || 'Sin instalador asignado';
     document.getElementById('proyectoDetalleSubtitulo').textContent =
       `${proyecto.tipo_suelo || 'Sin especificar'} · ${proyecto.metros_cuadrados ? proyecto.metros_cuadrados + ' m²' : '— m²'} · ${ESTADO_PROYECTO_LABEL[proyecto.estado] || proyecto.estado} · 👷 ${instaladoresTexto}`;
+    const wrapHistorial = document.getElementById('proyectoDetalleHistorialWrap');
+    wrapHistorial.innerHTML = proyecto.cliente_id
+      ? `<button type="button" class="lead-historial-btn" id="btnHistorialDetalleProyecto">🕐 Historial del cliente</button>`
+      : '';
+    const btnHistorialDetalle = document.getElementById('btnHistorialDetalleProyecto');
+    if(btnHistorialDetalle){
+      btnHistorialDetalle.addEventListener('click', ()=> abrirHistorialCliente(proyecto.cliente_id, proyecto.cliente || proyecto.nombre));
+    }
     const contenedor = document.getElementById('proyectoDetalleContenido');
     contenedor.innerHTML = '<div class="loading">Cargando…</div>';
     try{
