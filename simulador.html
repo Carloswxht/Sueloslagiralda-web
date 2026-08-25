@@ -409,6 +409,8 @@
   }
 
   function renderPasoExito(){
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     const heroTitulo = document.getElementById('simHeroTitulo');
     const heroSubtitulo = document.getElementById('simHeroSubtitulo');
     if(heroTitulo) heroTitulo.style.display = 'none';
