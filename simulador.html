@@ -298,7 +298,13 @@
       .replace(/"/g, '&quot;');
   }
 
+  function mostrarTituloHero(mostrar){
+    const heroTitulo = document.getElementById('simHeroTitulo');
+    if(heroTitulo) heroTitulo.style.display = mostrar ? '' : 'none';
+  }
+
   function renderPasoFoto(){
+    mostrarTituloHero(true);
     const card = document.getElementById('simCard');
     card.innerHTML = `
       <div class="sim-step-label">Paso 1 de 3</div>
@@ -332,6 +338,7 @@
   }
 
   function renderPasoTiempo(){
+    mostrarTituloHero(false);
     const card = document.getElementById('simCard');
     const opciones = ['Todavía lo estoy pensando', 'En los próximos meses', 'Lo antes posible'];
     card.innerHTML = `
@@ -367,6 +374,7 @@
   }
 
   function renderPasoDatos(){
+    mostrarTituloHero(false);
     const card = document.getElementById('simCard');
     card.innerHTML = `
       <div class="sim-step-label">Paso 3 de 3</div>
@@ -385,7 +393,7 @@
       </div>
       <label class="sim-consentimiento">
         <input type="checkbox" id="simConsentimiento" ${simConsentimientoValor ? 'checked' : ''}>
-        <span>Acepto que Suelos La Giralda use esta foto para generar mi simulación personalizada, y la publique en una página privada para que yo pueda verla.</span>
+        <span>Acepto que Suelos La Giralda use esta foto para hacer la simulación de mi suelo y me envíe un enlace donde pueda verla.</span>
       </label>
       <button type="button" class="btn btn-primary sim-btn-enviar" id="simEnviar">Enviar</button>
       <p class="sim-status" id="simStatus"></p>
@@ -409,6 +417,7 @@
 
   function renderPasoExito(){
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    mostrarTituloHero(true);
 
     const card = document.getElementById('simCard');
     card.innerHTML = `
