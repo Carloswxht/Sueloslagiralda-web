@@ -2411,14 +2411,14 @@
   function renderBloqueSimulacion(l){
     const idLead = l.id;
     if(l.foto_resultado_url && l.resultado_token){
-      const enlace = location.origin + '/resultado.html?id=' + l.resultado_token;
+      const enlace = location.origin + '/simulacion.html?id=' + l.resultado_token;
       const telefono = (l.telefono || '').replace(/\D/g, '');
       const mensaje = encodeURIComponent(`Hola${l.nombre && l.nombre !== '(no indicado)' ? ' ' + l.nombre : ''}, aquí tienes la simulación de tu suelo: ${enlace}`);
       return `
         <div class="lead-simulacion lead-simulacion-lista">
           <img src="${escapeHtml(l.foto_resultado_url)}" alt="Foto simulada" class="lead-foto-thumb">
           <div class="lead-simulacion-acciones">
-            <a href="https://wa.me/${telefono}?text=${mensaje}" target="_blank" class="lead-simulacion-btn lead-simulacion-btn-wa">💬 Enviar por WhatsApp</a>
+            <a href="https://wa.me/${telefono}?text=${mensaje}" target="_blank" class="lead-simulacion-btn lead-simulacion-btn-wa" data-lead-id="${l.id}">💬 Enviar por WhatsApp</a>
             <a href="${escapeHtml(enlace)}" target="_blank" class="lead-simulacion-btn lead-simulacion-btn-copiar">🔗 Abrir enlace</a>
           </div>
         </div>
@@ -2434,9 +2434,21 @@
     `;
   }
 
+  function generarCodigoCorto(longitud){
+    // Sin 0/O/1/l/i, para que no se confundan al leerlo o escribirlo a mano.
+    const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const random = window.crypto && crypto.getRandomValues ? crypto.getRandomValues(new Uint32Array(longitud)) : null;
+    let codigo = '';
+    for(let i=0; i<longitud; i++){
+      const idx = random ? random[i] % chars.length : Math.floor(Math.random() * chars.length);
+      codigo += chars[idx];
+    }
+    return codigo;
+  }
+
   async function subirFotoSimulada(leadId, archivo){
     const extension = (archivo.name.split('.').pop() || 'jpg').toLowerCase();
-    const token = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`).replace(/-/g, '');
+    const token = generarCodigoCorto(7);
     const nombreArchivo = `simulador-resultado/${token}.${extension}`;
 
     const resUpload = await fetch(`${SUPABASE_URL}/storage/v1/object/fotos-obra/${nombreArchivo}`, {
@@ -2768,6 +2780,17 @@
       }
       if(fotoBtn){
         fotoBtn.addEventListener('click', ()=> abrirLeadFotoVisor(fotoBtn.dataset.foto));
+      }
+      const btnWaSimulacion = card.querySelector('.lead-simulacion-btn-wa');
+      if(btnWaSimulacion){
+        btnWaSimulacion.addEventListener('click', ()=>{
+          // No bloqueamos la navegación a WhatsApp; el registro va en paralelo.
+          fetch(SUPABASE_URL + '/rest/v1/leads?id=eq.' + btnWaSimulacion.dataset.leadId, {
+            method: 'PATCH',
+            headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
+            body: JSON.stringify({ enlace_enviado_at: new Date().toISOString() })
+          }).catch(()=>{});
+        });
       }
       const inputSimulacion = card.querySelector('.lead-simulacion-input');
       if(inputSimulacion){
@@ -4175,6 +4198,14 @@
           concepto: `Lead: ${l.formulario}`,
           meta: formatearFecha(l.created_at)
         });
+        if(l.enlace_enviado_at){
+          eventos.push({
+            fecha: l.enlace_enviado_at,
+            icono: '💬',
+            concepto: 'Enlace de simulación enviado por WhatsApp',
+            meta: formatearFecha(l.enlace_enviado_at)
+          });
+        }
       });
 
       const historialesProyectos = await Promise.all(
