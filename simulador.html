@@ -250,7 +250,6 @@
   <div class="wrap">
     <span class="sim-eyebrow">Simulador gratuito</span>
     <h1 class="sim-title" id="simHeroTitulo">Mira tu <em>suelo nuevo</em> antes de decidir.</h1>
-    <p class="sim-sub" id="simHeroSubtitulo">Te enviamos por WhatsApp una simulación con el suelo que mejor combine con tu espacio.</p>
   </div>
 </section>
 
@@ -410,11 +409,6 @@
 
   function renderPasoExito(){
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    const heroTitulo = document.getElementById('simHeroTitulo');
-    const heroSubtitulo = document.getElementById('simHeroSubtitulo');
-    if(heroTitulo) heroTitulo.style.display = 'none';
-    if(heroSubtitulo) heroSubtitulo.style.display = 'none';
 
     const card = document.getElementById('simCard');
     card.innerHTML = `
