@@ -324,17 +324,53 @@
       if(!file) return;
       const hint = dropZone.querySelector('.drop-zone-text');
       if(hint) hint.textContent = 'Cargando foto…';
-      const lector = new FileReader();
-      lector.onload = ()=>{
-        simFotoDataUrl = lector.result;
-        simFotoTipo = file.type || 'image/jpeg';
-        renderPasoTiempo();
-      };
-      lector.onerror = ()=>{
-        if(hint) hint.textContent = 'No se pudo leer esa foto, prueba con otra.';
-      };
-      lector.readAsDataURL(file);
+      procesarFotoArchivo(
+        file,
+        (dataUrl)=>{
+          simFotoDataUrl = dataUrl;
+          simFotoTipo = 'image/jpeg';
+          renderPasoTiempo();
+        },
+        ()=>{
+          if(hint) hint.textContent = 'No se pudo leer esa foto, prueba con otra.';
+        }
+      );
     });
+  }
+
+  // Lee la foto sin cargar el archivo original completo en memoria (que puede
+  // pesar 10-20MB en móviles modernos), la redimensiona a un tamaño razonable
+  // y la comprime como JPEG — así se evita el fallo en teléfonos con poca RAM
+  // y además sube más rápido después.
+  function procesarFotoArchivo(file, onListo, onError){
+    const MAX_DIMENSION = 1600;
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        let { width, height } = img;
+        if(width > MAX_DIMENSION || height > MAX_DIMENSION){
+          const escala = MAX_DIMENSION / Math.max(width, height);
+          width = Math.round(width * escala);
+          height = Math.round(height * escala);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(objectUrl);
+        onListo(canvas.toDataURL('image/jpeg', 0.82));
+      } catch(err){
+        URL.revokeObjectURL(objectUrl);
+        onError();
+      }
+    };
+    img.onerror = ()=>{
+      URL.revokeObjectURL(objectUrl);
+      onError();
+    };
+    img.src = objectUrl;
   }
 
   function renderPasoTiempo(){
