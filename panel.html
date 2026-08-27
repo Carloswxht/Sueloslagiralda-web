@@ -408,6 +408,9 @@
   .proyecto-gasto-nombre{ color:var(--walnut); }
   .proyecto-gasto-derecha{ display:flex; align-items:center; gap:8px; }
   .proyecto-gasto-valor{ font-family:'IBM Plex Mono',monospace; color:var(--walnut-soft); white-space:nowrap; font-size:0.84rem; }
+  .proyecto-gasto-valor.positiva{ color:#2C6B3F; font-weight:700; }
+  .proyecto-gasto-valor.negativa{ color:var(--red); font-weight:700; }
+  .proyecto-gasto-valor.pendiente{ color:var(--ocre); font-weight:700; }
   .proyecto-gasto-fecha{ font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:#9B9284; white-space:nowrap; }
   .proyecto-gasto-borrar{ font-size:0.9rem; color:var(--red); background:none; border:none; cursor:pointer; padding:0; line-height:1; }
   .proyecto-footer{
@@ -5098,18 +5101,29 @@
       </div>
 
       ${puedeVerFinanzas ? `
-      <div class="fin-resumen" style="padding:0; margin:0 0 14px;">
-        <div class="fin-resumen-item">
-          <span class="fin-resumen-label">Valor</span>
-          <span class="fin-resumen-valor">${euros(parseFloat(proyecto.ingreso) || 0)}</span>
+      <div class="proyecto-grupo">
+        <div class="proyecto-header"><h3 class="proyecto-nombre">Resumen</h3></div>
+        <div class="proyecto-gasto-linea">
+          <span class="proyecto-gasto-nombre">Valor del proyecto</span>
+          <span class="proyecto-gasto-valor">${euros(parseFloat(proyecto.ingreso) || 0)}</span>
         </div>
-        <div class="fin-resumen-item">
-          <span class="fin-resumen-label">Cobrado</span>
-          <span class="fin-resumen-valor positiva">${euros(totalAbonos)}</span>
+        <div class="proyecto-gasto-linea">
+          <span class="proyecto-gasto-nombre">Cobrado</span>
+          <span class="proyecto-gasto-valor positiva">${euros(totalAbonos)}</span>
         </div>
-        <div class="fin-resumen-item">
-          <span class="fin-resumen-label">Utilidad</span>
-          <span class="fin-resumen-valor ${utilidad >= 0 ? 'positiva' : 'negativa'}">${euros(utilidad)}</span>
+        <div class="proyecto-gasto-linea">
+          <span class="proyecto-gasto-nombre">Pendiente por cobrar</span>
+          <span class="proyecto-gasto-valor pendiente">${euros(Math.max(0, (parseFloat(proyecto.ingreso) || 0) - totalAbonos))}</span>
+        </div>
+        <div class="proyecto-gasto-linea">
+          <span class="proyecto-gasto-nombre">Gastos</span>
+          <span class="proyecto-gasto-valor negativa">${euros(totalGastos)}</span>
+        </div>
+        <div class="proyecto-footer">
+          <div class="proyecto-footer-item">
+            <span class="proyecto-footer-label">Utilidad</span>
+            <span class="proyecto-footer-valor ${utilidad >= 0 ? 'positiva' : 'negativa'}">${euros(utilidad)}</span>
+          </div>
         </div>
       </div>
       ` : ''}
