@@ -674,8 +674,17 @@
     font-family:'Work Sans',sans-serif; font-size:0.82rem; font-weight:600;
   }
   .proy-mensaje-botones button:active{ opacity:0.85; }
-  #btnEnviarMensajeCliente{ background:var(--ocre); color:var(--walnut); }
-  #btnAgregarNotaHistorial{ background:transparent; color:var(--walnut-soft,#6e4626); border:1px solid var(--border,#e7e0d2) !important; }
+  .proy-mensaje-form button{
+    width:100%; padding:11px 10px; border-radius:8px; cursor:pointer;
+    font-family:'Work Sans',sans-serif; font-size:0.82rem; font-weight:600;
+  }
+  .proy-mensaje-form button:active{ opacity:0.85; }
+  .btn-mensaje-cliente{ background:var(--azulejo); color:#fff; border:none; }
+  .btn-nota-interna{ background:transparent; color:var(--walnut-soft,#6e4626); border:1px solid var(--border,#e7e0d2); }
+  .proyecto-grupo-cliente .proyecto-header{ background:rgba(51,84,77,0.08); }
+  .proyecto-grupo-interna .proyecto-header{ background:var(--stone); }
+  .proyecto-grupo-cliente .proyecto-nombre, .proyecto-grupo-interna .proyecto-nombre{ font-size:0.86rem; }
+  .proyecto-detalle-badges{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
   .proy-badge{
     font-family:'IBM Plex Mono',monospace; font-size:0.6rem; text-transform:uppercase;
     letter-spacing:0.04em; padding:3px 8px; border-radius:8px; white-space:nowrap; flex:0 0 auto;
@@ -725,6 +734,27 @@
   .proy-stat-valor{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:0.92rem; color:var(--walnut); }
   .proy-stat-valor.positiva{ color:#2C6B3F; }
   .proy-stat-valor.negativa{ color:var(--red); }
+
+  .proy-card-feedback{
+    margin-top:12px; padding:12px; border-radius:10px;
+    background:rgba(51,84,77,0.07); border:1px solid rgba(51,84,77,0.18);
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .proy-card-feedback-urgente{ background:rgba(181,69,58,0.08); border-color:var(--red); }
+  .proy-card-feedback-texto{
+    font-family:'Work Sans',sans-serif; font-size:0.78rem; color:var(--walnut); line-height:1.35; margin:0;
+  }
+  .proy-card-feedback-urgente .proy-card-feedback-texto{ color:#8A3B30; }
+  .proy-card-feedback-btn{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:10px 14px; border-radius:8px; background:var(--azulejo); color:#fff;
+    font-family:'Work Sans',sans-serif; font-size:0.82rem; font-weight:600; text-decoration:none;
+  }
+  .proy-card-feedback-btn:active{ opacity:0.8; transform:scale(0.98); }
+  .proy-card-feedback-listo{
+    margin-top:12px; padding:10px 12px; border-radius:10px; background:#DCEEDD;
+    font-family:'Work Sans',sans-serif; font-size:0.78rem; color:#2C6B3F; text-align:center; font-weight:600;
+  }
 
   .fin-resumen{ display:flex; gap:10px; padding:0 18px 16px; }
   .fin-resumen-item{
@@ -4638,6 +4668,80 @@
     return ids.map(id => nombreInstalador(id)).filter(Boolean).join(', ');
   }
 
+  // Mismo flujo de feedback que en el detalle del proyecto (renderBloqueFeedback),
+  // pero pensado para vivir dentro de una tarjeta de la lista, donde puede haber
+  // varias a la vez: usa clases + data-proyecto-id en vez de ids fijos.
+  function renderBloqueFeedbackTarjeta(p){
+    if(p.estado !== 'finalizado') return '';
+    const nombreCliente = (p.cliente || '').trim();
+    const telefono = (p.telefono_cliente || '').replace(/\D/g, '');
+    const instaladores = nombresInstaladores(p.instaladores_ids) || 'nuestro equipo';
+
+    if(p.resena_solicitada_at){
+      return `<div class="proy-card-feedback-listo">✅ Reseña solicitada el ${formatearFecha(p.resena_solicitada_at)}</div>`;
+    }
+
+    if(p.feedback_enviado_at){
+      const mensajeResena = encodeURIComponent(`Qué bueno! Si quieres ayudarnos, una reseña en Google nos vendría genial: [ENLACE PENDIENTE]`);
+      return `
+        <div class="proy-card-feedback">
+          <p class="proy-card-feedback-texto">Ya le preguntaste cómo le fue. Si te contestó bien, pídele la reseña:</p>
+          <a href="https://wa.me/${telefono}?text=${mensajeResena}" target="_blank" class="proy-card-feedback-btn js-pedir-resena-tarjeta" data-proyecto-id="${p.id}">⭐ Pedir reseña en Google</a>
+        </div>
+      `;
+    }
+
+    const VEINTICUATRO_HORAS_MS = 24 * 60 * 60 * 1000;
+    const vencido = p.finalizado_en && (Date.now() - new Date(p.finalizado_en).getTime()) > VEINTICUATRO_HORAS_MS;
+    const mensajeFeedback = encodeURIComponent(`Hola ${nombreCliente || ''} 👋 ¿Qué te ha parecido el suelo? Y dime también qué tal ${instaladores}, me interesa saberlo.`);
+    return `
+      <div class="proy-card-feedback ${vencido ? 'proy-card-feedback-urgente' : ''}">
+        <p class="proy-card-feedback-texto">${vencido ? '⚠️ Han pasado más de 24h — ' : ''}Pregúntale al cliente qué le pareció el trabajo:</p>
+        <a href="https://wa.me/${telefono}?text=${mensajeFeedback}" target="_blank" class="proy-card-feedback-btn js-pedir-feedback-tarjeta" data-proyecto-id="${p.id}">💬 Preguntar cómo le fue</a>
+      </div>
+    `;
+  }
+
+  function conectarFeedbackTarjeta(card, proyecto){
+    const wrap = card.querySelector('.proy-card-feedback-wrap');
+    if(!wrap) return;
+    const btnFeedback = wrap.querySelector('.js-pedir-feedback-tarjeta');
+    if(btnFeedback){
+      btnFeedback.addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        try{
+          const ahora = new Date().toISOString();
+          await fetch(SUPABASE_URL + '/rest/v1/proyectos?id=eq.' + proyecto.id, {
+            method: 'PATCH',
+            headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
+            body: JSON.stringify({ feedback_enviado_at: ahora })
+          });
+          proyecto.feedback_enviado_at = ahora;
+          registrarHistorial(proyecto.nombre, 'mensaje_enviado', 'Se le preguntó al cliente qué le pareció el trabajo');
+          wrap.innerHTML = renderBloqueFeedbackTarjeta(proyecto);
+          conectarFeedbackTarjeta(card, proyecto);
+        } catch(err){ toast('No se pudo registrar. Intenta de nuevo.'); }
+      });
+    }
+    const btnResena = wrap.querySelector('.js-pedir-resena-tarjeta');
+    if(btnResena){
+      btnResena.addEventListener('click', async (e)=>{
+        e.stopPropagation();
+        try{
+          const ahora = new Date().toISOString();
+          await fetch(SUPABASE_URL + '/rest/v1/proyectos?id=eq.' + proyecto.id, {
+            method: 'PATCH',
+            headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
+            body: JSON.stringify({ resena_solicitada_at: ahora })
+          });
+          proyecto.resena_solicitada_at = ahora;
+          registrarHistorial(proyecto.nombre, 'mensaje_enviado', 'Se le pidió al cliente una reseña en Google');
+          wrap.innerHTML = renderBloqueFeedbackTarjeta(proyecto);
+        } catch(err){ toast('No se pudo registrar. Intenta de nuevo.'); }
+      });
+    }
+  }
+
   function renderProyectosLista(){
     proyectosVista = filtroProyectoEstado === 'Todos'
       ? proyectosCargadosTodos
@@ -4703,6 +4807,7 @@
             <div class="proy-stat"><span class="proy-stat-label">Utilidad</span><span class="proy-stat-valor ${utilidad >= 0 ? 'positiva':'negativa'}">${euros(utilidad)}</span></div>
           </div>
           ` : ''}
+          ${p.estado === 'finalizado' ? `<div class="proy-card-feedback-wrap">${renderBloqueFeedbackTarjeta(p)}</div>` : ''}
         </div>
       `;
     }).join('');
@@ -4829,6 +4934,9 @@
         });
       }
 
+      const proyectoParaFeedback = proyectosVista.find(p => String(p.id) === card.dataset.id);
+      if(proyectoParaFeedback) conectarFeedbackTarjeta(card, proyectoParaFeedback);
+
       const msgBtn = card.querySelector('.proy-msg-btn');
       if(msgBtn){
         msgBtn.addEventListener('click', (e)=>{
@@ -4879,8 +4987,13 @@
       } catch(err){ /* si falla, el subtítulo simplemente no mostrará el instalador */ }
     }
     const instaladoresTexto = nombresInstaladores(proyecto.instaladores_ids) || 'Sin instalador asignado';
-    document.getElementById('proyectoDetalleSubtitulo').textContent =
-      `${proyecto.tipo_suelo || 'Sin especificar'} · ${proyecto.metros_cuadrados ? proyecto.metros_cuadrados + ' m²' : '— m²'} · ${ESTADO_PROYECTO_LABEL[proyecto.estado] || proyecto.estado} · 👷 ${instaladoresTexto}`;
+    document.getElementById('proyectoDetalleSubtitulo').innerHTML = `
+      ${escapeHtml(proyecto.tipo_suelo) || 'Sin especificar'} · ${proyecto.metros_cuadrados ? proyecto.metros_cuadrados + ' m²' : '— m²'}
+      <span class="proyecto-detalle-badges">
+        <span class="proy-badge ${proyecto.estado}">${ESTADO_PROYECTO_LABEL[proyecto.estado] || proyecto.estado}</span>
+        <span class="proy-badge instalador">👷 ${escapeHtml(instaladoresTexto)}</span>
+      </span>
+    `;
     const wrapHistorial = document.getElementById('proyectoDetalleHistorialWrap');
     wrapHistorial.innerHTML = proyecto.cliente_id
       ? `<button type="button" class="lead-historial-btn" id="btnHistorialDetalleProyecto">🕐 Historial del cliente</button>`
@@ -4984,54 +5097,85 @@
         <button type="button" class="pd-link proy-detalle-gasto" style="margin:0; flex:1; justify-content:center; background:#F5DBD8; border-color:#E9B9B2; color:var(--red);">➖ Gasto</button>
       </div>
 
+      ${puedeVerFinanzas ? `
+      <div class="fin-resumen" style="padding:0; margin:0 0 14px;">
+        <div class="fin-resumen-item">
+          <span class="fin-resumen-label">Valor</span>
+          <span class="fin-resumen-valor">${euros(parseFloat(proyecto.ingreso) || 0)}</span>
+        </div>
+        <div class="fin-resumen-item">
+          <span class="fin-resumen-label">Cobrado</span>
+          <span class="fin-resumen-valor positiva">${euros(totalAbonos)}</span>
+        </div>
+        <div class="fin-resumen-item">
+          <span class="fin-resumen-label">Utilidad</span>
+          <span class="fin-resumen-valor ${utilidad >= 0 ? 'positiva' : 'negativa'}">${euros(utilidad)}</span>
+        </div>
+      </div>
+      ` : ''}
+
       ${pendientes.length ? `
-        <div class="proy-detalle-seccion-titulo">Pendientes</div>
+      <div class="proyecto-grupo" id="grupoPendientes">
+        <div class="proyecto-header"><h3 class="proyecto-nombre">📝 Pendientes</h3></div>
         ${pendientesHtml}
+      </div>
       ` : ''}
 
       ${puedeVerFinanzas ? `
-      <div class="proy-detalle-seccion-titulo">Abonos</div>
-      ${abonosHtml}
-      <div class="proyecto-footer">
-        <div class="proyecto-footer-item">
-          <span class="proyecto-footer-label">Total abonos</span>
-          <span class="proyecto-footer-valor positiva">${euros(totalAbonos)}</span>
+      <div class="proyecto-grupo">
+        <div class="proyecto-header"><h3 class="proyecto-nombre">Abonos</h3></div>
+        ${abonosHtml}
+        <div class="proyecto-footer">
+          <div class="proyecto-footer-item">
+            <span class="proyecto-footer-label">Total abonos</span>
+            <span class="proyecto-footer-valor positiva">${euros(totalAbonos)}</span>
+          </div>
         </div>
       </div>
 
-      <div class="proy-detalle-seccion-titulo">Gastos</div>
-      ${gastosHtml}
-      <div class="proyecto-footer">
-        <div class="proyecto-footer-item">
-          <span class="proyecto-footer-label">Total gastos</span>
-          <span class="proyecto-footer-valor negativa">${euros(totalGastos)}</span>
-        </div>
-      </div>
-
-      <div class="proyecto-footer">
-        <div class="proyecto-footer-item">
-          <span class="proyecto-footer-label">Utilidad</span>
-          <span class="proyecto-footer-valor ${utilidad >= 0 ? 'positiva':'negativa'}">${euros(utilidad)}</span>
+      <div class="proyecto-grupo">
+        <div class="proyecto-header"><h3 class="proyecto-nombre">Gastos</h3></div>
+        ${gastosHtml}
+        <div class="proyecto-footer">
+          <div class="proyecto-footer-item">
+            <span class="proyecto-footer-label">Total gastos</span>
+            <span class="proyecto-footer-valor negativa">${euros(totalGastos)}</span>
+          </div>
+          <div class="proyecto-footer-item">
+            <span class="proyecto-footer-label">Utilidad</span>
+            <span class="proyecto-footer-valor ${utilidad >= 0 ? 'positiva':'negativa'}">${euros(utilidad)}</span>
+          </div>
         </div>
       </div>
       ` : ''}
 
       ${versionesPresupuesto.length ? `
-        <div class="proy-detalle-seccion-titulo">Presupuesto</div>
+      <div class="proyecto-grupo">
+        <div class="proyecto-header"><h3 class="proyecto-nombre">📄 Presupuesto</h3></div>
         ${versionesHtml}
+      </div>
       ` : ''}
 
-      <div class="proy-detalle-seccion-titulo">Mensaje / Nota</div>
-      <div class="proy-mensaje-form">
-        <textarea id="textareaMensajeNota" placeholder="Escribe un mensaje para el cliente o una nota…" rows="3"></textarea>
-        <div class="proy-mensaje-botones">
-          <button type="button" id="btnEnviarMensajeCliente">📤 Enviar por WhatsApp</button>
-          <button type="button" id="btnAgregarNotaHistorial">🗒️ Añadir nota al historial</button>
+      <div class="proyecto-grupo proyecto-grupo-cliente">
+        <div class="proyecto-header"><h3 class="proyecto-nombre">💬 Mensaje al cliente</h3></div>
+        <div class="proy-mensaje-form">
+          <textarea id="textareaMensajeCliente" placeholder="Escribe lo que quieres decirle al cliente por WhatsApp…" rows="3"></textarea>
+          <button type="button" id="btnEnviarMensajeCliente" class="btn-mensaje-cliente">📤 Enviar por WhatsApp</button>
         </div>
       </div>
 
-      <div class="proy-detalle-seccion-titulo">Historial</div>
-      ${historialHtml}
+      <div class="proyecto-grupo proyecto-grupo-interna">
+        <div class="proyecto-header"><h3 class="proyecto-nombre">🗒️ Nota interna</h3></div>
+        <div class="proy-mensaje-form">
+          <textarea id="textareaNotaInterna" placeholder="Anota algo para el equipo — esto no se envía a nadie…" rows="3"></textarea>
+          <button type="button" id="btnAgregarNotaHistorial" class="btn-nota-interna">Guardar nota</button>
+        </div>
+      </div>
+
+      <div class="proyecto-grupo">
+        <div class="proyecto-header"><h3 class="proyecto-nombre">Historial</h3></div>
+        ${historialHtml}
+      </div>
     `;
 
     const btnEditarActual = contenedor.querySelector('.proy-historial-editar');
@@ -5060,8 +5204,8 @@
         const fila = btn.closest('.proyecto-gasto-linea');
         if(fila) fila.remove();
         if(datos.pendientes.length === 0){
-          const tituloPendientes = Array.from(contenedor.querySelectorAll('.proy-detalle-seccion-titulo')).find(t => t.textContent === 'Pendientes');
-          if(tituloPendientes) tituloPendientes.remove();
+          const grupoPendientes = document.getElementById('grupoPendientes');
+          if(grupoPendientes) grupoPendientes.remove();
         }
       });
     });
@@ -5075,13 +5219,14 @@
       abrirDineroDesdeProyecto('gasto', proyecto);
     });
 
-    const textareaMensajeNota = contenedor.querySelector('#textareaMensajeNota');
+    const textareaMensajeCliente = contenedor.querySelector('#textareaMensajeCliente');
     const btnEnviarMensajeCliente = contenedor.querySelector('#btnEnviarMensajeCliente');
+    const textareaNotaInterna = contenedor.querySelector('#textareaNotaInterna');
     const btnAgregarNota = contenedor.querySelector('#btnAgregarNotaHistorial');
 
-    if(btnEnviarMensajeCliente && textareaMensajeNota){
+    if(btnEnviarMensajeCliente && textareaMensajeCliente){
       btnEnviarMensajeCliente.addEventListener('click', async ()=>{
-        const texto = textareaMensajeNota.value.trim();
+        const texto = textareaMensajeCliente.value.trim();
         if(!texto){
           toast('Escribe un mensaje antes de enviarlo.');
           return;
@@ -5100,11 +5245,11 @@
       });
     }
 
-    if(btnAgregarNota && textareaMensajeNota){
+    if(btnAgregarNota && textareaNotaInterna){
       btnAgregarNota.addEventListener('click', async ()=>{
-        const texto = textareaMensajeNota.value.trim();
+        const texto = textareaNotaInterna.value.trim();
         if(!texto){
-          toast('Escribe algo antes de añadirlo como nota.');
+          toast('Escribe algo antes de guardarlo como nota.');
           return;
         }
         btnAgregarNota.disabled = true;
