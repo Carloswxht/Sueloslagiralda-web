@@ -569,6 +569,17 @@
     background:none; color:var(--walnut-soft); font-family:'Work Sans',sans-serif;
     font-size:0.78rem; font-weight:600; cursor:pointer;
   }
+  .feedback-cuadro{
+    margin:14px 15px; padding:14px; border-radius:10px; border:1px solid var(--line); background:var(--stone-light);
+  }
+  .feedback-cuadro-urgente{ border-color:var(--red); background:rgba(181,69,58,0.08); }
+  .feedback-cuadro-texto{ font-family:'Work Sans',sans-serif; font-size:0.84rem; color:var(--walnut); margin-bottom:10px; }
+  .feedback-cuadro-btn{
+    display:inline-flex; align-items:center; gap:6px; padding:10px 16px; border-radius:8px;
+    background:var(--azulejo); color:#fff; font-family:'Work Sans',sans-serif; font-size:0.84rem;
+    font-weight:600; text-decoration:none;
+  }
+  .feedback-cuadro-listo{ font-family:'Work Sans',sans-serif; font-size:0.84rem; color:var(--walnut-soft); text-align:center; }
 
   .lead-simulacion{ margin:0 15px 12px; }
   .lead-simulacion-subir-btn{
@@ -1305,6 +1316,7 @@
       <h2 id="proyectoDetalleTitulo">Proyecto</h2>
       <p id="proyectoDetalleSubtitulo"></p>
       <div id="proyectoDetalleHistorialWrap"></div>
+      <div id="proyectoDetalleFeedbackWrap"></div>
     </div>
     <div id="proyectoDetalleContenido">
       <div class="loading">Cargando…</div>
@@ -4551,6 +4563,76 @@
     const u = equipoParaAsignarCache.find(x => x.id === instaladorId);
     return u ? u.nombre : '';
   }
+  function renderBloqueFeedback(p){
+    if(p.estado !== 'finalizado') return '';
+    const nombreCliente = (p.cliente || '').trim();
+    const telefono = (p.telefono_cliente || '').replace(/\D/g, '');
+    const instaladores = nombresInstaladores(p.instaladores_ids) || 'nuestro equipo';
+
+    // Paso 2: ya se preguntó cómo le fue, falta pedir la reseña
+    if(p.feedback_enviado_at && !p.resena_solicitada_at){
+      const mensajeResena = encodeURIComponent(`Qué bueno! Si quieres ayudarnos, una reseña en Google nos vendría genial: [ENLACE PENDIENTE]`);
+      return `
+        <div class="feedback-cuadro">
+          <p class="feedback-cuadro-texto">Ya le preguntaste cómo le fue. Si te contestó bien, pídele la reseña:</p>
+          <a href="https://wa.me/${telefono}?text=${mensajeResena}" target="_blank" class="feedback-cuadro-btn" id="btnPedirResena" data-proyecto-id="${p.id}">⭐ Pedir reseña en Google</a>
+        </div>
+      `;
+    }
+
+    // Paso 3: ya se pidió la reseña, no hay más acción
+    if(p.resena_solicitada_at){
+      return `<div class="feedback-cuadro feedback-cuadro-listo">✅ Reseña solicitada el ${formatearFecha(p.resena_solicitada_at)}</div>`;
+    }
+
+    // Paso 1: recién finalizado, falta preguntar cómo le fue
+    const VEINTICUATRO_HORAS_MS = 24 * 60 * 60 * 1000;
+    const vencido = p.finalizado_en && (Date.now() - new Date(p.finalizado_en).getTime()) > VEINTICUATRO_HORAS_MS;
+    const mensajeFeedback = encodeURIComponent(`Hola ${nombreCliente || ''} 👋 ¿Qué te ha parecido el suelo? Y dime también qué tal ${instaladores}, me interesa saberlo.`);
+    return `
+      <div class="feedback-cuadro ${vencido ? 'feedback-cuadro-urgente' : ''}">
+        <p class="feedback-cuadro-texto">${vencido ? '⚠️ Han pasado más de 24h — ' : ''}Pregúntale al cliente qué le pareció el trabajo:</p>
+        <a href="https://wa.me/${telefono}?text=${mensajeFeedback}" target="_blank" class="feedback-cuadro-btn" id="btnPedirFeedback" data-proyecto-id="${p.id}">💬 Preguntar cómo le fue</a>
+      </div>
+    `;
+  }
+
+  function conectarBotonesFeedback(proyecto, wrapFeedback){
+    const btnPedirFeedback = document.getElementById('btnPedirFeedback');
+    if(btnPedirFeedback){
+      btnPedirFeedback.addEventListener('click', async ()=>{
+        try{
+          const ahora = new Date().toISOString();
+          await fetch(SUPABASE_URL + '/rest/v1/proyectos?id=eq.' + proyecto.id, {
+            method: 'PATCH',
+            headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
+            body: JSON.stringify({ feedback_enviado_at: ahora })
+          });
+          proyecto.feedback_enviado_at = ahora;
+          wrapFeedback.innerHTML = renderBloqueFeedback(proyecto);
+          conectarBotonesFeedback(proyecto, wrapFeedback);
+          registrarHistorial(proyecto.nombre, 'mensaje_enviado', 'Se le preguntó al cliente qué le pareció el trabajo');
+        } catch(err){ /* si falla, se puede volver a intentar */ }
+      });
+    }
+    const btnPedirResena = document.getElementById('btnPedirResena');
+    if(btnPedirResena){
+      btnPedirResena.addEventListener('click', async ()=>{
+        try{
+          const ahora = new Date().toISOString();
+          await fetch(SUPABASE_URL + '/rest/v1/proyectos?id=eq.' + proyecto.id, {
+            method: 'PATCH',
+            headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
+            body: JSON.stringify({ resena_solicitada_at: ahora })
+          });
+          proyecto.resena_solicitada_at = ahora;
+          wrapFeedback.innerHTML = renderBloqueFeedback(proyecto);
+          registrarHistorial(proyecto.nombre, 'mensaje_enviado', 'Se le pidió al cliente una reseña en Google');
+        } catch(err){ /* si falla, se puede volver a intentar */ }
+      });
+    }
+  }
+
   function nombresInstaladores(ids){
     if(!Array.isArray(ids) || !ids.length) return '';
     return ids.map(id => nombreInstalador(id)).filter(Boolean).join(', ');
@@ -4706,13 +4788,16 @@
             const confirmado = confirm(`¿Cambiar el estado de "${proyecto.nombre}" a "${nuevoLabel}"?`);
             if(!confirmado) return;
             try{
+              const patchBody = { estado: nuevoEstado };
+              if(nuevoEstado === 'finalizado') patchBody.finalizado_en = new Date().toISOString();
               const res = await fetch(SUPABASE_URL + '/rest/v1/proyectos?id=eq.' + proyecto.id, {
                 method: 'PATCH',
                 headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
-                body: JSON.stringify({ estado: nuevoEstado })
+                body: JSON.stringify(patchBody)
               });
               if(!res.ok) throw new Error();
               proyecto.estado = nuevoEstado;
+              if(nuevoEstado === 'finalizado') proyecto.finalizado_en = patchBody.finalizado_en;
               await registrarHistorial(proyecto.nombre, 'cambio_estado', `Estado cambiado a "${nuevoLabel}"`);
               badge.textContent = nuevoLabel + ' ▾';
               badge.className = 'proy-badge proy-badge-click ' + nuevoEstado;
@@ -4804,6 +4889,9 @@
     if(btnHistorialDetalle){
       btnHistorialDetalle.addEventListener('click', ()=> abrirHistorialCliente(proyecto.cliente_id, proyecto.cliente || proyecto.nombre));
     }
+    const wrapFeedback = document.getElementById('proyectoDetalleFeedbackWrap');
+    wrapFeedback.innerHTML = renderBloqueFeedback(proyecto);
+    conectarBotonesFeedback(proyecto, wrapFeedback);
     const contenedor = document.getElementById('proyectoDetalleContenido');
     contenedor.innerHTML = '<div class="loading">Cargando…</div>';
     try{
