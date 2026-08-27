@@ -45,36 +45,29 @@
   .res-titulo em{ font-style:italic; color:var(--oak-deep); }
   .res-hint{ font-size:0.84rem; color:var(--walnut-soft); margin-bottom:24px; }
 
-  /* ---------- Después como foto principal + Antes como miniatura enmarcada ---------- */
-  .compare-hero{
-    position:relative; aspect-ratio:4/3; overflow:hidden;
+  /* ---------- Comparador antes/después (mismo mecanismo que el index) ---------- */
+  .compare{
+    position:relative; aspect-ratio:4/3; overflow:hidden; cursor:ew-resize;
     border-radius:6px; box-shadow:var(--shadow); background:var(--card);
   }
-  .hero-despues{ position:absolute; inset:0; background-size:cover; background-position:center; }
-  .hero-despues-label{
-    position:absolute; top:12px; right:12px; font-family:'IBM Plex Mono',monospace; font-size:0.68rem;
+  .compare .before, .compare .after{ position:absolute; inset:0; background-size:cover; background-position:center; }
+  .compare .after{ z-index:1; }
+  .compare .before{ z-index:2; clip-path: inset(0 50% 0 0); }
+  .compare .divider{
+    position:absolute; top:0; bottom:0; left:50%; width:3px; background:var(--stone-light);
+    box-shadow:0 0 0 1px rgba(0,0,0,0.2); z-index:3;
+  }
+  .compare .handle{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:38px; height:38px; border-radius:50%; background:var(--stone-light);
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.85rem; box-shadow:var(--shadow); z-index:4;
+  }
+  .compare-label{
+    position:absolute; bottom:12px; font-family:'IBM Plex Mono',monospace; font-size:0.68rem;
     padding:4px 9px; background:rgba(42,33,24,0.75); color:#fff; border-radius:2px;
   }
-  .hero-antes-thumb{
-    position:absolute; left:12px; bottom:12px; width:36%; max-width:150px; aspect-ratio:4/3;
-    border-radius:4px; overflow:hidden; border:4px solid var(--card);
-    box-shadow:0 6px 16px rgba(42,33,24,0.3); cursor:pointer; padding:0; background:none;
-  }
-  .hero-antes-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .hero-antes-thumb-label{
-    position:absolute; bottom:4px; left:4px; font-family:'IBM Plex Mono',monospace; font-size:0.58rem;
-    padding:2px 6px; background:rgba(42,33,24,0.75); color:#fff; border-radius:2px;
-  }
-  .antes-lightbox{
-    position:fixed; inset:0; background:rgba(20,15,10,0.92); z-index:50;
-    display:flex; align-items:center; justify-content:center; padding:24px; cursor:zoom-out;
-  }
-  .antes-lightbox-inner{ position:relative; max-width:520px; width:100%; }
-  .antes-lightbox-inner img{ width:100%; border-radius:6px; box-shadow:var(--shadow); display:block; }
-  .antes-lightbox-label{
-    position:absolute; top:12px; left:12px; font-family:'IBM Plex Mono',monospace; font-size:0.7rem;
-    padding:4px 9px; background:rgba(42,33,24,0.8); color:#fff; border-radius:2px;
-  }
+  .compare-label.l{left:12px;} .compare-label.r{right:12px;}
   .res-arrastra{ text-align:center; font-size:0.78rem; color:var(--walnut-soft); margin-top:10px; }
 
   .btn{
@@ -166,17 +159,24 @@
       .replace(/"/g, '&quot;');
   }
 
-  function abrirAntesLightbox(src){
-    const overlay = document.createElement('div');
-    overlay.className = 'antes-lightbox';
-    overlay.innerHTML = `
-      <div class="antes-lightbox-inner">
-        <span class="antes-lightbox-label">Antes</span>
-        <img src="${escapeHtml(src)}" alt="Antes">
-      </div>
-    `;
-    overlay.addEventListener('click', ()=> overlay.remove());
-    document.body.appendChild(overlay);
+  function iniciarComparador(el){
+    const before = el.querySelector('.before');
+    const divider = el.querySelector('.divider');
+    const handle = el.querySelector('.handle');
+    let dragging = false;
+    function setPos(clientX){
+      const rect = el.getBoundingClientRect();
+      let pct = ((clientX - rect.left) / rect.width) * 100;
+      pct = Math.max(4, Math.min(96, pct));
+      before.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+      divider.style.left = pct + '%';
+      handle.style.left = pct + '%';
+    }
+    el.addEventListener('mousedown', e=>{ dragging=true; setPos(e.clientX); });
+    window.addEventListener('mousemove', e=>{ if(dragging) setPos(e.clientX); });
+    window.addEventListener('mouseup', ()=> dragging=false);
+    el.addEventListener('touchstart', e=> setPos(e.touches[0].clientX));
+    el.addEventListener('touchmove', e=> setPos(e.touches[0].clientX));
   }
 
   function renderNoEncontrado(){
@@ -212,17 +212,18 @@
           <div class="res-hero">
             ${nombre ? `<p class="res-saludo">Hola ${escapeHtml(nombre)},</p>` : ''}
             <h1 class="res-titulo">Así quedaría tu <em>suelo nuevo</em></h1>
-            <p class="res-hint">Toca la foto pequeña para ver el "antes" completo.</p>
+            <p class="res-hint">Arrastra para comparar antes y después.</p>
           </div>
 
-          <div class="compare-hero">
-            <div class="hero-despues" style="background-image:url('${escapeHtml(lead.foto_resultado_url)}')"></div>
-            <span class="hero-despues-label">Después</span>
-            <button type="button" class="hero-antes-thumb" id="btnVerAntes" aria-label="Ver foto de antes en grande">
-              <img src="${escapeHtml(lead.foto_url)}" alt="Antes" loading="lazy">
-              <span class="hero-antes-thumb-label">Antes</span>
-            </button>
+          <div class="compare" data-compare>
+            <div class="before" style="background-image:url('${escapeHtml(lead.foto_url)}')"></div>
+            <div class="after" style="background-image:url('${escapeHtml(lead.foto_resultado_url)}')"></div>
+            <div class="divider"></div>
+            <div class="handle">⇔</div>
+            <div class="compare-label l">Antes</div>
+            <div class="compare-label r">Después</div>
           </div>
+          <p class="res-arrastra">👆 Desliza la línea para ver el cambio</p>
 
           <div class="res-cta">
             <a href="https://wa.me/34605288673?text=${mensajeWa}" class="btn btn-wa">💬 Hablar con Suelos La Giralda</a>
@@ -255,8 +256,7 @@
         </div>
         <div class="sim-section-espacio"></div>
       `;
-      const btnVerAntes = document.getElementById('btnVerAntes');
-      if(btnVerAntes) btnVerAntes.addEventListener('click', ()=> abrirAntesLightbox(lead.foto_url));
+      iniciarComparador(document.querySelector('[data-compare]'));
     } catch(err){
       renderNoEncontrado();
     }
