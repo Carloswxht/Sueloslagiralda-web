@@ -52,7 +52,8 @@
   }
   .compare .before, .compare .after{ position:absolute; inset:0; background-size:cover; background-position:center; }
   .compare .after{ z-index:1; }
-  .compare .before{ z-index:2; clip-path: inset(0 50% 0 0); }
+  .compare .before{ z-index:2; clip-path: inset(0 50% 0 0); background:var(--card); }
+  .compare .before-img{ position:absolute; inset:16px; background-size:cover; background-position:center; border-radius:2px; box-shadow:0 2px 8px rgba(42,33,24,0.18); }
   .compare .divider{
     position:absolute; top:0; bottom:0; left:50%; width:3px; background:var(--stone-light);
     box-shadow:0 0 0 1px rgba(0,0,0,0.2); z-index:3;
@@ -216,7 +217,9 @@
           </div>
 
           <div class="compare" data-compare>
-            <div class="before" style="background-image:url('${escapeHtml(lead.foto_url)}')"></div>
+            <div class="before">
+              <div class="before-img" style="background-image:url('${escapeHtml(lead.foto_url)}')"></div>
+            </div>
             <div class="after" style="background-image:url('${escapeHtml(lead.foto_resultado_url)}')"></div>
             <div class="divider"></div>
             <div class="handle">⇔</div>
