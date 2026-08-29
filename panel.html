@@ -593,6 +593,23 @@
     cursor:pointer; text-align:center;
   }
   .lead-simulacion-input{ display:none; }
+  .lead-simulacion-ia{ display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+  .lead-simulacion-material{
+    padding:10px 12px; border-radius:8px; border:1px solid var(--line);
+    font-family:'Work Sans',sans-serif; font-size:0.84rem; background:#fff; color:var(--walnut);
+  }
+  .lead-simulacion-ia-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:11px; border-radius:10px; border:none;
+    background:var(--azulejo); color:#fff;
+    font-family:'Work Sans',sans-serif; font-size:0.84rem; font-weight:600;
+    cursor:pointer;
+  }
+  .lead-simulacion-ia-btn:disabled{ opacity:0.6; }
+  .lead-simulacion-separador{
+    text-align:center; font-size:0.72rem; color:var(--walnut-soft);
+    text-transform:uppercase; letter-spacing:0.05em; margin:2px 0 10px;
+  }
   .lead-simulacion-lista{ display:flex; gap:10px; align-items:flex-start; }
   .lead-simulacion-lista .lead-foto-thumb{ width:64px; height:64px; }
   .lead-simulacion-acciones{ display:flex; flex-direction:column; gap:6px; flex:1; }
@@ -2469,10 +2486,25 @@
         </div>
       `;
     }
+    const fotoOriginalHtml = l.foto_url ? `
+      <div class="lead-simulacion-ia">
+        <select class="lead-simulacion-material" id="materialIa${idLead}">
+          <option value="tarima laminada">Tarima laminada</option>
+          <option value="tarima vinílica LVT">Tarima vinílica LVT</option>
+          <option value="tarima vinílica SPC">Tarima vinílica SPC</option>
+          <option value="tarima multicapa">Tarima multicapa</option>
+          <option value="tarima de madera maciza">Tarima de madera maciza</option>
+          <option value="tarima exterior WPC">Tarima exterior WPC</option>
+        </select>
+        <button type="button" class="lead-simulacion-ia-btn" data-lead-id="${idLead}" data-foto-url="${escapeHtml(l.foto_url)}">🪄 Generar simulación con IA</button>
+      </div>
+      <div class="lead-simulacion-separador">o súbela tú mismo</div>
+    ` : '';
     return `
       <div class="lead-simulacion">
+        ${fotoOriginalHtml}
         <label class="lead-simulacion-subir-btn">
-          📤 Subir foto simulada
+          <span class="lead-simulacion-subir-texto">📤 Subir foto simulada</span>
           <input type="file" accept="image/*" class="lead-simulacion-input" data-lead-id="${idLead}">
         </label>
       </div>
@@ -2489,6 +2521,26 @@
       codigo += chars[idx];
     }
     return codigo;
+  }
+
+  async function generarSimulacionConIA(fotoUrl, material){
+    const res = await fetch('https://generar-simulacion.carloswxht.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fotoUrl,
+        material,
+        supabaseUrl: SUPABASE_URL,
+        supabaseKey: SUPABASE_KEY,
+        bucket: 'fotos-obra'
+      })
+    });
+    if(!res.ok){
+      let mensaje = 'No se pudo generar la simulación.';
+      try{ const data = await res.json(); if(data && data.error) mensaje = data.error; } catch(e){}
+      throw new Error(mensaje);
+    }
+    return await res.json(); // { fotoResultadoUrl, token }
   }
 
   async function subirFotoSimulada(leadId, archivo){
@@ -2837,6 +2889,34 @@
           }).catch(()=>{});
         });
       }
+      const btnGenerarIa = card.querySelector('.lead-simulacion-ia-btn');
+      if(btnGenerarIa){
+        btnGenerarIa.addEventListener('click', async ()=>{
+          const leadId = btnGenerarIa.dataset.leadId;
+          const fotoUrl = btnGenerarIa.dataset.fotoUrl;
+          const selectMaterial = document.getElementById('materialIa' + leadId);
+          const material = selectMaterial ? selectMaterial.value : 'tarima laminada';
+          const textoOriginal = btnGenerarIa.textContent;
+          btnGenerarIa.disabled = true;
+          btnGenerarIa.textContent = 'Generando… (puede tardar 10-20 seg)';
+          try{
+            const resultado = await generarSimulacionConIA(fotoUrl, material);
+            const resUpdate = await fetch(SUPABASE_URL + '/rest/v1/leads?id=eq.' + leadId, {
+              method: 'PATCH',
+              headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer':'return=minimal' },
+              body: JSON.stringify({ foto_resultado_url: resultado.fotoResultadoUrl, resultado_token: resultado.token })
+            });
+            if(!resUpdate.ok) throw new Error('No se pudo guardar el resultado.');
+            toast('Simulación generada. Ya puedes enviar el enlace.');
+            cargarLeads();
+          } catch(err){
+            toast(err.message || 'No se pudo generar la simulación. Inténtalo de nuevo.');
+            btnGenerarIa.disabled = false;
+            btnGenerarIa.textContent = textoOriginal;
+          }
+        });
+      }
+
       const inputSimulacion = card.querySelector('.lead-simulacion-input');
       if(inputSimulacion){
         inputSimulacion.addEventListener('change', async ()=>{
@@ -2844,15 +2924,17 @@
           if(!archivo) return;
           const leadId = inputSimulacion.dataset.leadId;
           const label = inputSimulacion.closest('.lead-simulacion-subir-btn');
-          const textoOriginal = label.textContent;
-          label.textContent = 'Subiendo…';
+          const textoEl = label.querySelector('.lead-simulacion-subir-texto');
+          const textoOriginal = textoEl.textContent;
+          textoEl.textContent = 'Subiendo…';
           try{
             await subirFotoSimulada(leadId, archivo);
             toast('Foto simulada guardada. Ya puedes enviar el enlace.');
             cargarLeads();
           } catch(err){
             toast('No se pudo subir la foto. Inténtalo de nuevo.');
-            label.textContent = textoOriginal;
+            textoEl.textContent = textoOriginal;
+            inputSimulacion.value = '';
           }
         });
       }
